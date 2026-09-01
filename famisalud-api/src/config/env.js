@@ -1,0 +1,35 @@
+import 'dotenv/config';
+import { z } from 'zod';
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().int().positive().default(3000),
+  API_PREFIX: z.string().default('/api'),
+  DATABASE_URL: z.string().min(1),
+  DATABASE_SSL: z
+    .string()
+    .default('false')
+    .transform((value) => value.toLowerCase() === 'true'),
+  FRONTEND_URL: z.string().url().default('http://localhost:5173'),
+  ENABLE_DEV_AUTH: z
+    .string()
+    .default('false')
+    .transform((value) => value.toLowerCase() === 'true'),
+  DEV_USER_ID: z.string().uuid().optional(),
+  CLOUDINARY_CLOUD_NAME: z.string().default(''),
+  CLOUDINARY_API_KEY: z.string().default(''),
+  CLOUDINARY_API_SECRET: z.string().default(''),
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASSWORD: z.string().default('')
+});
+
+const result = envSchema.safeParse(process.env);
+
+if (!result.success) {
+  console.error('Configuración de entorno inválida:', result.error.flatten().fieldErrors);
+  process.exit(1);
+}
+
+export const env = result.data;
