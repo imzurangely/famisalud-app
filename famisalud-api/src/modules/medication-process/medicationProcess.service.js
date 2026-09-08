@@ -35,6 +35,7 @@ import {
 } from '../../shared/authorization/familyAccess.js';
 import { writeAuditLog } from '../../shared/utils/auditLog.js';
 import * as repository from './medicationProcess.repository.js';
+import { findActivePlanByMember, createPlan as createInsurancePlan } from '../eps/eps.repository.js';
 
 const AUTH_ENTITY = 'medication_authorizations';
 const DELIVERY_ENTITY = 'medication_deliveries';
@@ -451,13 +452,81 @@ export async function getAuthorization(memberId, medicationId, authorizationId, 
   });
 }
 
-// Función interna compartida por createAuthorization y renewAuthorization:
-// valida, inserta la autorización y genera su primera entrega automáticamente.
-async function finalizeNewAuthorization(client, { member, medication, medicationId, userId, prepared }) {
-  if (prepared.epsId) {
-    const eps = await repository.findActiveEps(client, prepared.epsId);
-    if (!eps) throw new AppError('La EPS seleccionada no existe o está inactiva.', 422);
+// Resuelve la EPS de la autorización a partir de la afiliación (insurance
+// plan) activa del miembro. Si el miembro no tiene ninguna, exige que se
+// envíe epsId explícitamente y, en ese caso, le crea automáticamente su
+// primera afiliación con esa EPS (el resto de los datos del plan —
+// plan_number, contributor_type, etc.— los completa el usuario después
+// desde su perfil; aquí solo se resuelve el vínculo con la EPS).
+async function resolveAuthorizationEps(client, memberId, requestedEpsId) {
+  const activePlan = await findActivePlanByMember(client, memberId);
+  if (activePlan) {
+    return activePlan.eps_id;
   }
+
+  if (!requestedEpsId) {
+    throw new AppError(
+      'Este miembro todavía no tiene una EPS registrada. Debes indicar epsId para poder continuar; se le asociará automáticamente como su afiliación.',
+      422
+    );
+  }
+
+  const eps = await repository.findActiveEps(client, requestedEpsId);
+  if (!eps) throw new AppError('La EPS seleccionada no existe o está inactiva.', 422);
+
+  await createInsurancePlan(client, memberId, { epsId: requestedEpsId });
+
+  return requestedEpsId;
+}
+
+// Convierte el nombre del medicamento en el bloque legible del número de
+// autorización: sin tildes, en mayúsculas, con guiones entre palabras, y
+// pegando un número a la unidad que lo sigue ("50 mg" -> "50MG") para que
+// no quede un guion partiendo la dosis en dos.
+// Ejemplo: "Losartán 50 mg" -> "LOSARTAN-50MG"
+function buildMedicationAuthorizationSlug(medicationName) {
+  return medicationName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/(\d+)\s+([A-Z]+)/g, '$1$2')
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+// Si no se envía authorizationNumber, se genera uno propio y legible por
+// medicamento: "AUT-LOSARTAN-50MG-001", "AUT-LOSARTAN-50MG-002"...
+// (secuencial para ese medicamento, con relleno de ceros a 3 dígitos).
+async function resolveAuthorizationNumber(client, medicationId, medicationName, providedNumber) {
+  if (providedNumber) return providedNumber;
+  const nextNumber = await repository.getNextAuthorizationNumber(client, medicationId);
+  const slug = buildMedicationAuthorizationSlug(medicationName);
+  const paddedNumber = String(nextNumber).padStart(3, '0');
+  return `AUT-${slug}-${paddedNumber}`;
+}
+
+// Si no se envía authorizationDate: si existe una solicitud de autorización
+// pendiente (POST .../authorization-request) sin resolver, se usa la fecha
+// en que se solicitó; si no, se usa validFrom (se registró directo, sin
+// pasar antes por "solicitada").
+async function resolveAuthorizationDate(client, medicationId, providedDate, validFrom) {
+  if (providedDate) return providedDate;
+  const requestedAt = await repository.findLatestUnfulfilledAuthorizationRequest(client, medicationId);
+  if (!requestedAt) return validFrom;
+
+  const requestedDate = formatDate(new Date(requestedAt));
+  // authorization_date nunca puede quedar después de valid_from (lo exige la
+  // base de datos); si la solicitud quedó registrada más tarde que el inicio
+  // de vigencia elegido, se usa validFrom en su lugar.
+  return requestedDate > validFrom ? validFrom : requestedDate;
+}
+
+async function finalizeNewAuthorization(client, { member, medication, medicationId, userId, memberId, prepared }) {
+  // Función interna compartida por createAuthorization y renewAuthorization:
+  // resuelve EPS/número/fecha, valida, inserta la autorización y genera su
+  // primera entrega automáticamente.
+  prepared.epsId = await resolveAuthorizationEps(client, memberId, prepared.epsId);
+
   if (prepared.previousAuthorizationId) {
     const previous = await repository.findAuthorizationById(client, prepared.previousAuthorizationId, medicationId);
     if (!previous) throw new AppError('La autorización anterior no pertenece al medicamento.', 422);
@@ -465,6 +534,19 @@ async function finalizeNewAuthorization(client, { member, medication, medication
 
   validateAuthorizationAgainstMedication(prepared, medication);
   validateAuthorizationPeriod(prepared);
+
+  prepared.authorizationNumber = await resolveAuthorizationNumber(
+    client,
+    medicationId,
+    medication.name,
+    prepared.authorizationNumber
+  );
+  prepared.authorizationDate = await resolveAuthorizationDate(
+    client,
+    medicationId,
+    prepared.authorizationDate,
+    prepared.validFrom
+  );
 
   if (prepared.remainingQuantity === undefined || prepared.remainingQuantity === null) {
     prepared.remainingQuantity = prepared.totalAuthorizedQuantity;
@@ -516,7 +598,7 @@ export async function createAuthorization(memberId, medicationId, userId, data =
 
     const prepared = { ...data, previousAuthorizationId: null };
 
-    return finalizeNewAuthorization(client, { member, medication, medicationId, userId, prepared });
+    return finalizeNewAuthorization(client, { member, medication, medicationId, memberId, userId, prepared });
   });
 }
 
@@ -539,8 +621,8 @@ export async function renewAuthorization(memberId, medicationId, userId, data = 
 
     const prepared = {
       previousAuthorizationId: previous.id,
-      epsId: data.epsId ?? previous.eps_id,
-      authorizationNumber: data.authorizationNumber ?? previous.authorization_number,
+      epsId: data.epsId ?? null,
+      authorizationNumber: data.authorizationNumber ?? null,
       authorizationDate: data.authorizationDate ?? null,
       validFrom: data.validFrom ?? null,
       validTo: data.validTo ?? null,
@@ -559,7 +641,7 @@ export async function renewAuthorization(memberId, medicationId, userId, data = 
       notes: data.notes ?? previous.notes
     };
 
-    return finalizeNewAuthorization(client, { member, medication, medicationId, userId, prepared });
+    return finalizeNewAuthorization(client, { member, medication, medicationId, memberId, userId, prepared });
   });
 }
 
@@ -577,6 +659,26 @@ export async function updateAuthorization(memberId, medicationId, authorizationI
 
     const authorization = await repository.updateAuthorization(client, authorizationId, medicationId, data);
     if (!authorization) throw new AppError('Autorización no encontrada.', 404);
+
+    // Los datos de farmacia se copian a cada entrega en el momento en que se
+    // genera (para conservar historial en las ya recogidas/perdidas), pero
+    // la entrega ABIERTA actual debe reflejar siempre la información más
+    // reciente de la autorización, no la foto vieja del momento en que se
+    // generó.
+    const pharmacyFieldsChanged = ['pharmacyName', 'pharmacyAddress', 'pharmacyPhone', 'pharmacyWebsite'].some(
+      (field) => field in data
+    );
+    if (pharmacyFieldsChanged) {
+      const openDelivery = await repository.findOpenDeliveryForAuthorization(client, authorizationId, medicationId, true);
+      if (openDelivery) {
+        await repository.updateDeliveryPharmacyInfo(client, openDelivery.id, medicationId, {
+          pharmacyName: authorization.pharmacy_name,
+          pharmacyAddress: authorization.pharmacy_address,
+          pharmacyPhone: authorization.pharmacy_phone,
+          pharmacyWebsite: authorization.pharmacy_website
+        });
+      }
+    }
 
     // Este endpoint NUNCA toca medications.management_status. Solo registra
     // en el historial cuando la configuración pasa de PENDIENTE a CONFIGURADA,

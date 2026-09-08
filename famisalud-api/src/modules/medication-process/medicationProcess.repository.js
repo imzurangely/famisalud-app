@@ -196,6 +196,51 @@ export async function decrementRemainingQuantity(client, authorizationId, medica
   return findAuthorizationById(client, authorizationId, medicationId);
 }
 
+export async function getNextAuthorizationNumber(client, medicationId) {
+  const result = await client.query(
+    `SELECT COUNT(*) + 1 AS next_number FROM medication_authorizations WHERE medication_id = $1`,
+    [medicationId]
+  );
+  return Number(result.rows[0].next_number);
+}
+
+// Busca una solicitud de autorización (evento AUTORIZACION_SOLICITADA) que
+// todavía no haya sido resuelta por ninguna autorización registrada después
+// de ella. Se usa para que authorization_date, si no se envía, tome la
+// fecha en la que realmente se solicitó (en vez de la fecha de hoy).
+export async function findLatestUnfulfilledAuthorizationRequest(client, medicationId) {
+  const result = await client.query(
+    `SELECT mph.created_at
+     FROM medication_process_history mph
+     WHERE mph.medication_id = $1
+       AND mph.event_type = 'AUTORIZACION_SOLICITADA'
+       AND mph.created_at > COALESCE(
+         (SELECT MAX(created_at) FROM medication_authorizations WHERE medication_id = $1),
+         '-infinity'::timestamptz
+       )
+     ORDER BY mph.created_at DESC
+     LIMIT 1`,
+    [medicationId]
+  );
+  return result.rows[0]?.created_at ?? null;
+}
+
+export async function updateDeliveryPharmacyInfo(client, deliveryId, medicationId, data) {
+  const result = await client.query(
+    `UPDATE medication_deliveries
+     SET pharmacy_name = $3,
+         pharmacy_address = $4,
+         pharmacy_phone = $5,
+         pharmacy_website = $6,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1 AND medication_id = $2
+     RETURNING id`,
+    [deliveryId, medicationId, data.pharmacyName ?? null, data.pharmacyAddress ?? null, data.pharmacyPhone ?? null, data.pharmacyWebsite ?? null]
+  );
+  if (!result.rows[0]) return null;
+  return findDeliveryById(client, deliveryId, medicationId);
+}
+
 export async function findPreviousAuthorizationForRenewal(client, medicationId) {
   const result = await client.query(
     `SELECT ${AUTH_SELECT}
