@@ -11,6 +11,7 @@ import allergiesRoutes from './modules/allergies/allergy.routes.js';
 import medicationRoutes from './modules/medications/medication.routes.js';
 import medicationProcessRoutes from './modules/medication-process/medicationProcess.routes.js';
 import medicalAppointmentRoutes from './modules/medical-appointments/medicalAppointment.routes.js';
+import documentRoutes from './modules/documents/document.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFound } from './middlewares/notFound.js';
 
@@ -45,6 +46,7 @@ app.use(env.API_PREFIX, allergiesRoutes);
 app.use(env.API_PREFIX, medicationRoutes);
 app.use(env.API_PREFIX, medicationProcessRoutes);
 app.use(env.API_PREFIX, medicalAppointmentRoutes);
+app.use(env.API_PREFIX, documentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
