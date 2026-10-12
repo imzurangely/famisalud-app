@@ -549,12 +549,14 @@ export async function listReminderRecipients(client, medicationId) {
   return result.rows.map((row) => row.user_id);
 }
 
-export async function existsNotificationForEntity(client, entityId, notificationType) {
+export async function existsNotificationForEntity(client, { userId, entityId, notificationType }) {
   const result = await client.query(
     `SELECT 1 FROM notifications
-     WHERE entity_id = $1 AND notification_type = $2
+     WHERE user_id = $1
+       AND entity_id = $2
+       AND notification_type = $3
      LIMIT 1`,
-    [entityId, notificationType]
+    [userId, entityId, notificationType]
   );
   return result.rows.length > 0;
 }

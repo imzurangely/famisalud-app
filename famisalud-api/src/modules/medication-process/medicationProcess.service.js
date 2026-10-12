@@ -378,13 +378,17 @@ async function closeDeliveryCycle(client, { medication, delivery, userId, baseDa
 // ----------------------------------------------------------------------------
 
 async function notifyRecipients(client, medicationId, { notificationType, title, body, entityId, dedupe = true }) {
-  if (dedupe) {
-    const alreadySent = await repository.existsNotificationForEntity(client, entityId, notificationType);
-    if (alreadySent) return;
-  }
-
   const recipients = await repository.listReminderRecipients(client, medicationId);
   for (const userId of recipients) {
+    if (dedupe) {
+      const alreadySent = await repository.existsNotificationForEntity(client, {
+        userId,
+        entityId,
+        notificationType
+      });
+      if (alreadySent) continue;
+    }
+
     await repository.insertNotification(client, {
       userId,
       notificationType,

@@ -3,6 +3,7 @@ import { app } from './app.js';
 import { env } from './config/env.js';
 import { pool } from './config/database.js';
 import { runDailyProcessSweep } from './modules/medication-process/medicationProcess.cron.js';
+import { runReminderSweep } from './modules/reminders/reminder.cron.js';
 
 const server = app.listen(env.PORT, () => {
   console.log(`FamiSalud API ejecutándose en http://localhost:${env.PORT}`);
@@ -23,10 +24,23 @@ const dailySweepTask = cron.schedule(
   { timezone: 'America/Bogota' }
 );
 
+// Barrido de recordatorios: revisa cada minuto las tomas de medicamentos y
+// las citas que están entrando en su ventana de recordatorio.
+const reminderSweepTask = cron.schedule(
+  '* * * * *',
+  () => {
+    runReminderSweep().catch((error) => {
+      console.error('[cron] Error en el barrido de recordatorios:', error);
+    });
+  },
+  { timezone: 'America/Bogota' }
+);
+
 async function shutdown(signal) {
   console.log(`\n${signal}: cerrando servidor...`);
 
   dailySweepTask.stop();
+  reminderSweepTask.stop();
 
   server.close(async () => {
     await pool.end();

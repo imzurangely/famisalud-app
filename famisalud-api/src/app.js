@@ -12,6 +12,9 @@ import medicationRoutes from './modules/medications/medication.routes.js';
 import medicationProcessRoutes from './modules/medication-process/medicationProcess.routes.js';
 import medicalAppointmentRoutes from './modules/medical-appointments/medicalAppointment.routes.js';
 import documentRoutes from './modules/documents/document.routes.js';
+import notificationRoutes from './modules/notifications/notification.routes.js';
+import deviceRoutes from './modules/devices/device.routes.js';
+import reminderRoutes from './modules/reminders/reminder.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFound } from './middlewares/notFound.js';
 
@@ -47,6 +50,9 @@ app.use(env.API_PREFIX, medicationRoutes);
 app.use(env.API_PREFIX, medicationProcessRoutes);
 app.use(env.API_PREFIX, medicalAppointmentRoutes);
 app.use(env.API_PREFIX, documentRoutes);
+app.use(env.API_PREFIX, notificationRoutes);
+app.use(env.API_PREFIX, deviceRoutes);
+app.use(env.API_PREFIX, reminderRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
