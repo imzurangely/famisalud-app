@@ -85,7 +85,14 @@ function formatDate(date) {
 }
 
 function todayDateString() {
-  return formatDate(new Date());
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function lastDayOfMonth(date) {
@@ -953,14 +960,17 @@ export async function runOverdueRenewalNotification(client, { deliveryId, medica
   });
 }
 
-export async function runDeliveryLossTransition(client, { deliveryId, medicationId }) {
+export async function runDeliveryLossTransition(
+  client,
+  { deliveryId, medicationId, referenceDate = todayDateString() }
+) {
   const medication = await repository.findMedicationById(client, medicationId);
   if (!medication) return;
 
   const delivery = await repository.findDeliveryById(client, deliveryId, medicationId, true);
   if (!delivery) return;
   if (!['PROGRAMADA', 'RENOVACION_PENDIENTE', 'LISTO_PARA_RECOGER'].includes(delivery.status)) return;
-  if (!delivery.pickup_deadline || delivery.pickup_deadline >= todayDateString()) return;
+  if (!delivery.pickup_deadline || delivery.pickup_deadline >= referenceDate) return;
 
   const note = `Entrega perdida: no se recogió antes del ${formatDate(new Date(delivery.pickup_deadline))}.`;
   await repository.markDeliveryLost(client, deliveryId, medicationId, note);
@@ -984,8 +994,7 @@ export async function runDeliveryLossTransition(client, { deliveryId, medication
     notificationType: 'ENTREGA_MEDICAMENTO',
     title: 'Se perdió una entrega de medicamento',
     body: note,
-    entityId: deliveryId,
-    dedupe: false
+    entityId: deliveryId
   });
 }
 

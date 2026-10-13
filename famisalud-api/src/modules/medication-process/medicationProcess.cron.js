@@ -37,7 +37,14 @@ import {
 } from './medicationProcess.service.js';
 
 function todayDateString() {
-  return new Date().toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 async function withOwnClient(fn) {
@@ -93,7 +100,11 @@ export async function runDailyProcessSweep({ referenceDate = todayDateString() }
   );
 
   const lossErrors = await processEach(deadlineCandidates, (client, row) =>
-    runDeliveryLossTransition(client, { deliveryId: row.id, medicationId: row.medication_id })
+    runDeliveryLossTransition(client, {
+      deliveryId: row.id,
+      medicationId: row.medication_id,
+      referenceDate
+    })
   );
 
   const summary = {

@@ -192,7 +192,7 @@ async function listDueAppointmentReminders(client, now) {
 
   const result = await client.query(
     `SELECT a.id, a.member_id, a.title, a.doctor_name, a.location,
-            a.starts_at, fm.linked_user_id, a.created_by_user_id,
+            a.starts_at, fm.family_id, fm.linked_user_id, a.created_by_user_id,
             fm.first_name AS member_first_name, fm.last_name AS member_last_name
      FROM appointments a
      JOIN family_members fm ON fm.id = a.member_id
@@ -206,42 +206,81 @@ async function listDueAppointmentReminders(client, now) {
   return result.rows;
 }
 
+async function listAppointmentRecipients(client, { familyId, linkedUserId, createdByUserId }) {
+  // Todas las cuentas ADMINISTRADOR activas de la familia reciben el recordatorio,
+  // independientemente de quién sea el miembro que tiene la cita.
+  const adminsResult = await client.query(
+    `SELECT fu.user_id
+     FROM family_users fu
+     JOIN users u ON u.id = fu.user_id
+     WHERE fu.family_id = $1
+       AND fu.role = 'ADMINISTRADOR'::family_role_enum
+       AND fu.left_at IS NULL
+       AND u.is_active = TRUE
+       AND u.deleted_at IS NULL`,
+    [familyId]
+  );
+
+  const recipients = new Set(adminsResult.rows.map((row) => row.user_id));
+
+  // Conserva la entrega al usuario vinculado; si el miembro no tiene cuenta,
+  // conserva también el comportamiento anterior de notificar al creador.
+  // Set evita una segunda fila si esa persona ya es administrador.
+  const primaryRecipientId = linkedUserId ?? createdByUserId;
+  if (primaryRecipientId) {
+    const userResult = await client.query(
+      `SELECT id FROM users
+       WHERE id = $1 AND is_active = TRUE AND deleted_at IS NULL`,
+      [primaryRecipientId]
+    );
+    if (userResult.rows.length > 0) recipients.add(primaryRecipientId);
+  }
+
+  return [...recipients];
+}
+
 async function processAppointmentReminders(client, now) {
   const appointments = await listDueAppointmentReminders(client, now);
   let created = 0;
 
   for (const appointment of appointments) {
-    const userId = appointment.linked_user_id ?? appointment.created_by_user_id;
-    if (!userId) continue;
-    const memberName = `${appointment.member_first_name} ${appointment.member_last_name}`.trim();
-    const isRecipientTheAppointmentOwner = appointment.linked_user_id === userId;
-
-    const exists = await existsNotificationForOccurrence(client, {
-      userId,
-      notificationType: 'RECORDATORIO_CITA',
-      entityId: appointment.id
+    const recipients = await listAppointmentRecipients(client, {
+      familyId: appointment.family_id,
+      linkedUserId: appointment.linked_user_id,
+      createdByUserId: appointment.created_by_user_id
     });
-    if (exists) continue;
+    if (recipients.length === 0) continue;
 
+    const memberName = `${appointment.member_first_name} ${appointment.member_last_name}`.trim();
     const date = new Intl.DateTimeFormat('es-CO', {
       timeZone: TIME_ZONE,
       dateStyle: 'medium',
       timeStyle: 'short'
     }).format(new Date(appointment.starts_at));
 
-    await insertNotification(client, {
-      userId,
-      notificationType: 'RECORDATORIO_CITA',
-      title: isRecipientTheAppointmentOwner
-        ? `Tienes una cita próxima: ${appointment.title}`
-        : `Cita médica de ${memberName}: ${appointment.title}`,
-      body: isRecipientTheAppointmentOwner
-        ? `Tu cita está programada para ${date}.`
-        : `La cita de ${memberName} está programada para ${date}.`,
-      entityType: 'APPOINTMENT',
-      entityId: appointment.id
-    });
-    created += 1;
+    for (const userId of recipients) {
+      const exists = await existsNotificationForOccurrence(client, {
+        userId,
+        notificationType: 'RECORDATORIO_CITA',
+        entityId: appointment.id
+      });
+      if (exists) continue;
+
+      const isRecipientTheAppointmentOwner = appointment.linked_user_id === userId;
+      await insertNotification(client, {
+        userId,
+        notificationType: 'RECORDATORIO_CITA',
+        title: isRecipientTheAppointmentOwner
+          ? `Tienes una cita próxima: ${appointment.title}`
+          : `Cita médica de ${memberName}: ${appointment.title}`,
+        body: isRecipientTheAppointmentOwner
+          ? `Tu cita está programada para ${date}.`
+          : `La cita de ${memberName} está programada para ${date}.`,
+        entityType: 'APPOINTMENT',
+        entityId: appointment.id
+      });
+      created += 1;
+    }
   }
 
   return { appointments: appointments.length, created };
