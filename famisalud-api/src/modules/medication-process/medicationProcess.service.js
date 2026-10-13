@@ -385,7 +385,17 @@ async function closeDeliveryCycle(client, { medication, delivery, userId, baseDa
 // ----------------------------------------------------------------------------
 
 async function notifyRecipients(client, medicationId, { notificationType, title, body, entityId, dedupe = true }) {
-  const recipients = await repository.listReminderRecipients(client, medicationId);
+  const [recipients, medication] = await Promise.all([
+    repository.listReminderRecipients(client, medicationId),
+    repository.findMedicationById(client, medicationId)
+  ]);
+
+  const medicationName = medication?.name?.trim() || 'el medicamento';
+  const memberName = [medication?.member_first_name, medication?.member_last_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim() || 'el miembro de la familia';
+
   for (const userId of recipients) {
     if (dedupe) {
       const alreadySent = await repository.existsNotificationForEntity(client, {
@@ -396,11 +406,19 @@ async function notifyRecipients(client, medicationId, { notificationType, title,
       if (alreadySent) continue;
     }
 
+    const isRecipientTheMedicationOwner = medication?.linked_user_id === userId;
+    const notificationContext = { medicationName, memberName, isRecipientTheMedicationOwner };
+    const generatedTitle = typeof title === 'function' ? title(notificationContext) : `${title}: ${medicationName}`;
+    // El campo title admite 150 caracteres. Si el contexto y el nombre juntos
+    // exceden el límite, priorizamos conservar el nombre completo del medicamento.
+    const notificationTitle = generatedTitle.length <= 150 ? generatedTitle : medicationName.slice(0, 150);
+    const notificationBody = typeof body === 'function' ? body(notificationContext) : `${body} Medicamento: ${medicationName}.`;
+
     await repository.insertNotification(client, {
       userId,
       notificationType,
-      title,
-      body,
+      title: notificationTitle,
+      body: notificationBody,
       entityType: DELIVERY_ENTITY,
       entityId
     });
@@ -942,8 +960,14 @@ export async function runRenewalReminderTransition(client, { deliveryId, medicat
 
   await notifyRecipients(client, medicationId, {
     notificationType: 'RENOVACION_MEDICAMENTO',
-    title: 'Próxima entrega de medicamento',
-    body: 'Se acerca la fecha de tu próxima entrega. Recuerda realizar la gestión necesaria con anticipación.',
+    title: ({ medicationName, memberName, isRecipientTheMedicationOwner }) =>
+      isRecipientTheMedicationOwner
+        ? `Próxima entrega de ${medicationName}`
+        : `Próxima entrega de ${medicationName} para ${memberName}`,
+    body: ({ medicationName, memberName, isRecipientTheMedicationOwner }) =>
+      isRecipientTheMedicationOwner
+        ? `Se acerca la fecha de tu próxima entrega de ${medicationName}. Recuerda realizar la gestión necesaria con anticipación.`
+        : `Se acerca la fecha de la próxima entrega de ${medicationName} para ${memberName}. Recuerda realizar la gestión necesaria con anticipación.`,
     entityId: deliveryId
   });
 }
@@ -954,8 +978,14 @@ export async function runOverdueRenewalNotification(client, { deliveryId, medica
 
   await notifyRecipients(client, medicationId, {
     notificationType: 'ENTREGA_MEDICAMENTO',
-    title: 'Ya deberías recoger tu medicamento',
-    body: 'La fecha programada para tu entrega ya pasó y aún no gestionas la renovación. Realízala lo antes posible para no perder esta entrega.',
+    title: ({ medicationName, memberName, isRecipientTheMedicationOwner }) =>
+      isRecipientTheMedicationOwner
+        ? `Debes gestionar la entrega de ${medicationName}`
+        : `Debes gestionar la entrega de ${medicationName} para ${memberName}`,
+    body: ({ medicationName, memberName, isRecipientTheMedicationOwner }) =>
+      isRecipientTheMedicationOwner
+        ? `La fecha programada para recoger ${medicationName} ya pasó y aún no gestionas la renovación. Realízala lo antes posible para no perder esta entrega.`
+        : `La fecha programada para recoger ${medicationName} para ${memberName} ya pasó y aún no se ha gestionado la renovación. Realiza la gestión lo antes posible para no perder esta entrega.`,
     entityId: deliveryId
   });
 }
@@ -992,8 +1022,14 @@ export async function runDeliveryLossTransition(
 
   await notifyRecipients(client, medicationId, {
     notificationType: 'ENTREGA_MEDICAMENTO',
-    title: 'Se perdió una entrega de medicamento',
-    body: note,
+    title: ({ medicationName, memberName, isRecipientTheMedicationOwner }) =>
+      isRecipientTheMedicationOwner
+        ? `Se perdió una entrega de ${medicationName}`
+        : `Se perdió una entrega de ${medicationName} para ${memberName}`,
+    body: ({ medicationName, memberName, isRecipientTheMedicationOwner }) =>
+      isRecipientTheMedicationOwner
+        ? `No se recogió ${medicationName} antes de la fecha límite (${formatDate(new Date(delivery.pickup_deadline))}). ${note}`
+        : `No se recogió ${medicationName} para ${memberName} antes de la fecha límite (${formatDate(new Date(delivery.pickup_deadline))}). ${note}`,
     entityId: deliveryId
   });
 }

@@ -131,12 +131,30 @@ async function existsNotificationForOccurrence(client, { userId, notificationTyp
   return Boolean(result.rows[0]);
 }
 
+function buildNotificationTitle(title, subjectName) {
+  const fullTitle = String(title ?? 'Notificación de FamiSalud');
+  if (fullTitle.length <= 150) return fullTitle;
+
+  // No cortar el nombre del medicamento o de la cita si el contexto hace
+  // que el título supere el límite de notifications.title.
+  const subject = String(subjectName ?? '').trim();
+  if (subject && subject.length <= 150) return subject;
+  return fullTitle.slice(0, 150);
+}
+
 async function insertNotification(client, data) {
   await client.query(
     `INSERT INTO notifications (
       user_id, notification_type, title, body, entity_type, entity_id
     ) VALUES ($1,$2,$3,$4,$5,$6)`,
-    [data.userId, data.notificationType, data.title, data.body ?? null, data.entityType, data.entityId]
+    [
+      data.userId,
+      data.notificationType,
+      buildNotificationTitle(data.title, data.subjectName),
+      data.body ?? null,
+      data.entityType,
+      data.entityId
+    ]
   );
 }
 
@@ -163,7 +181,7 @@ async function processMedicationReminders(client, now) {
       const isRecipientTheMedicationOwner = schedule.linked_user_id === userId;
       const title = isRecipientTheMedicationOwner
         ? `Hora de tomar ${schedule.medication_name}`
-        : `Medicamento de ${memberName}: ${schedule.medication_name}`;
+        : `Medicamento ${schedule.medication_name} para ${memberName}`;
       const instructionText = schedule.instructions
         ? ` Indicaciones: ${schedule.instructions}`
         : ' Recuerda seguir las indicaciones registradas.';
@@ -175,6 +193,7 @@ async function processMedicationReminders(client, now) {
         userId,
         notificationType: 'RECORDATORIO_MEDICAMENTO',
         title,
+        subjectName: schedule.medication_name,
         body,
         entityType: 'MEDICATION_SCHEDULE_OCCURRENCE',
         entityId
@@ -272,7 +291,8 @@ async function processAppointmentReminders(client, now) {
         notificationType: 'RECORDATORIO_CITA',
         title: isRecipientTheAppointmentOwner
           ? `Tienes una cita próxima: ${appointment.title}`
-          : `Cita médica de ${memberName}: ${appointment.title}`,
+          : `Cita: ${appointment.title} · ${memberName}`,
+        subjectName: appointment.title,
         body: isRecipientTheAppointmentOwner
           ? `Tu cita está programada para ${date}.`
           : `La cita de ${memberName} está programada para ${date}.`,

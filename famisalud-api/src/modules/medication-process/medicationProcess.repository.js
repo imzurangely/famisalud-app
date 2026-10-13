@@ -61,9 +61,15 @@ export async function findMedication(client, medicationId, memberId) {
 // sobre todo el sistema, no dentro de una petición de un usuario.
 export async function findMedicationById(client, medicationId) {
   const result = await client.query(
-    `SELECT id, member_id, name, clinical_status, management_status
-     FROM medications
-     WHERE id = $1 AND deleted_at IS NULL
+    `SELECT m.id, m.member_id, m.name, m.clinical_status, m.management_status,
+            fm.first_name AS member_first_name,
+            fm.last_name AS member_last_name,
+            fm.linked_user_id
+     FROM medications m
+     JOIN family_members fm ON fm.id = m.member_id
+     WHERE m.id = $1
+       AND m.deleted_at IS NULL
+       AND fm.deleted_at IS NULL
      LIMIT 1`,
     [medicationId]
   );
@@ -566,6 +572,6 @@ export async function insertNotification(client, { userId, notificationType, tit
     `INSERT INTO notifications (
       user_id, notification_type, title, body, entity_type, entity_id
     ) VALUES ($1,$2,$3,$4,$5,$6)`,
-    [userId, notificationType, title, body ?? null, entityType ?? null, entityId ?? null]
+    [userId, notificationType, String(title).slice(0, 150), body ?? null, entityType ?? null, entityId ?? null]
   );
 }
