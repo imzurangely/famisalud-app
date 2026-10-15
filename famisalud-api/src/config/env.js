@@ -22,7 +22,12 @@ const envSchema = z.object({
   SMTP_HOST: z.string().default(''),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_USER: z.string().default(''),
-  SMTP_PASSWORD: z.string().default('')
+  SMTP_PASSWORD: z.string().default(''),
+  SMTP_FROM: z.string().default(''),
+  JWT_SECRET: z.string().min(32).default('dev-only-change-me-famisalud-2026-secret'),
+  ACCESS_TOKEN_MINUTES: z.coerce.number().int().positive().default(15),
+  REFRESH_TOKEN_DAYS: z.coerce.number().int().positive().default(30),
+  REFRESH_COOKIE_NAME: z.string().min(1).default('refresh_token')
 });
 
 const result = envSchema.safeParse(process.env);
@@ -33,3 +38,8 @@ if (!result.success) {
 }
 
 export const env = result.data;
+
+if (env.NODE_ENV === 'production' && env.JWT_SECRET === 'dev-only-change-me-famisalud-2026-secret') {
+  console.error('Configuración de entorno inválida: define un JWT_SECRET propio de al menos 32 caracteres.');
+  process.exit(1);
+}
