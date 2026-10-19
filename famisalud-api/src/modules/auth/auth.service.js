@@ -201,6 +201,8 @@ export async function forgotPassword(email) {
   if (!resetRequest.found) return { message: GENERIC_RESET_MESSAGE };
   if (resetRequest.cooldown) return { message: GENERIC_RESET_MESSAGE, retryAfterSeconds: 60 };
 
+  let emailSent = false;
+
   if (hasSmtpConfiguration()) {
     try {
       await sendPasswordResetEmail({
@@ -208,19 +210,25 @@ export async function forgotPassword(email) {
         firstName: resetRequest.user.first_name,
         code: resetRequest.code
       });
+      emailSent = true;
     } catch (error) {
       await withTransaction((client) => repository.markResetCodeUsed(client, resetRequest.resetId));
       throw error;
     }
-    return { message: GENERIC_RESET_MESSAGE };
   }
+
+  const response = { message: GENERIC_RESET_MESSAGE };
 
   if (env.NODE_ENV !== 'production') {
-    console.warn(`[auth] Código de recuperación de desarrollo para ${resetRequest.user.email}: ${resetRequest.code}`);
-    return { message: GENERIC_RESET_MESSAGE, debugCode: resetRequest.code, expiresAt: resetRequest.expiresAt };
+    response.debugCode = resetRequest.code;
+    response.expiresAt = resetRequest.expiresAt;
+
+    if (!emailSent) {
+      console.warn(`[auth] Código de recuperación de desarrollo para ${resetRequest.user.email}: ${resetRequest.code}`);
+    }
   }
 
-  return { message: GENERIC_RESET_MESSAGE };
+  return response;
 }
 
 export async function resetPassword(data) {

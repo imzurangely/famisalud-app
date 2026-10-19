@@ -1,3 +1,5 @@
+import { personMemberScope } from '../../shared/utils/personMemberScope.js';
+
 const DOCUMENT_SELECT = `
   id,
   member_id,
@@ -17,7 +19,7 @@ const DOCUMENT_SELECT = `
 `;
 
 export async function list(client, memberId, filters = {}) {
-  const conditions = ['d.member_id = $1', 'd.deleted_at IS NULL'];
+  const conditions = [`${personMemberScope('d.member_id', '$1')}`, 'd.deleted_at IS NULL'];
   const values = [memberId];
   let index = 2;
 
@@ -55,7 +57,7 @@ export async function findById(client, documentId, memberId) {
     `SELECT ${DOCUMENT_SELECT}
      FROM documents
      WHERE id = $1
-       AND member_id = $2
+       AND ${personMemberScope('member_id', '$2')}
        AND deleted_at IS NULL
      LIMIT 1`,
     [documentId, memberId]
@@ -128,7 +130,7 @@ export async function update(client, documentId, memberId, data) {
     `UPDATE documents
      SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP
      WHERE id = $1
-       AND member_id = $2
+       AND ${personMemberScope('member_id', '$2')}
        AND deleted_at IS NULL
      RETURNING ${DOCUMENT_SELECT}`,
     [documentId, memberId, ...values]
@@ -143,7 +145,7 @@ export async function softDelete(client, documentId, memberId) {
      SET deleted_at = CURRENT_TIMESTAMP,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = $1
-       AND member_id = $2
+       AND ${personMemberScope('member_id', '$2')}
        AND deleted_at IS NULL
      RETURNING id, member_id, cloudinary_public_id, mime_type, deleted_at`,
     [documentId, memberId]
@@ -157,7 +159,7 @@ export async function appointmentBelongsToMember(client, appointmentId, memberId
     `SELECT id
      FROM appointments
      WHERE id = $1
-       AND member_id = $2
+       AND ${personMemberScope('member_id', '$2')}
        AND deleted_at IS NULL
      LIMIT 1`,
     [appointmentId, memberId]

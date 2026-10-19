@@ -1,3 +1,5 @@
+import { personMemberScope } from '../../shared/utils/personMemberScope.js';
+
 export async function findAppointmentById(client, appointmentId, memberId = null) {
   const result = await client.query(
     `SELECT id, member_id, created_by_user_id, title, appointment_type,
@@ -6,7 +8,7 @@ export async function findAppointmentById(client, appointmentId, memberId = null
      FROM appointments
      WHERE id = $1
        AND deleted_at IS NULL
-       AND ($2::uuid IS NULL OR member_id = $2)
+       AND ($2::uuid IS NULL OR ${personMemberScope('member_id', '$2')})
      LIMIT 1`,
     [appointmentId, memberId]
   );
@@ -16,7 +18,7 @@ export async function findAppointmentById(client, appointmentId, memberId = null
 
 export async function listAppointments(client, memberId, { from, to, status } = {}) {
   const values = [memberId];
-  const conditions = ['member_id = $1', 'deleted_at IS NULL'];
+  const conditions = [`${personMemberScope('member_id', '$1')}`, 'deleted_at IS NULL'];
 
   if (from) {
     values.push(from);
@@ -51,7 +53,7 @@ export async function findConflictingAppointment(client, memberId, startsAt, app
   const result = await client.query(
     `SELECT id, title, starts_at, ends_at, status
      FROM appointments
-     WHERE member_id = $1
+     WHERE ${personMemberScope('member_id', '$1')}
        AND deleted_at IS NULL
        AND status <> 'CANCELADA'
        AND ($3::uuid IS NULL OR id <> $3)

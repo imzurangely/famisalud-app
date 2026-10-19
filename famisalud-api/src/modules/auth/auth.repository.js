@@ -1,9 +1,11 @@
 export async function findUserByEmail(client, email) {
   const result = await client.query(
-    `SELECT id, first_name, last_name, email, password_hash, phone, avatar_url,
-            timezone, locale, is_verified, is_active, created_at
-     FROM users
-     WHERE email = $1 AND deleted_at IS NULL
+    `SELECT u.id, u.person_id, p.first_name, p.last_name, u.email,
+            u.password_hash, p.phone, p.avatar_url, u.timezone, u.locale,
+            u.is_verified, u.is_active, u.deleted_at, u.created_at
+     FROM users u
+     JOIN persons p ON p.id = u.person_id
+     WHERE u.email = $1 AND u.deleted_at IS NULL
      LIMIT 1`,
     [email]
   );
@@ -12,10 +14,12 @@ export async function findUserByEmail(client, email) {
 
 export async function findUserById(client, userId) {
   const result = await client.query(
-    `SELECT id, first_name, last_name, email, phone, avatar_url,
-            timezone, locale, is_verified, is_active, created_at
-     FROM users
-     WHERE id = $1 AND deleted_at IS NULL AND is_active = TRUE
+    `SELECT u.id, u.person_id, p.first_name, p.last_name, u.email,
+            p.phone, p.avatar_url, u.timezone, u.locale, u.is_verified,
+            u.is_active, u.created_at
+     FROM users u
+     JOIN persons p ON p.id = u.person_id
+     WHERE u.id = $1 AND u.deleted_at IS NULL AND u.is_active = TRUE
      LIMIT 1`,
     [userId]
   );
@@ -23,14 +27,22 @@ export async function findUserById(client, userId) {
 }
 
 export async function createUser(client, data, passwordHash) {
-  const result = await client.query(
-    `INSERT INTO users (first_name, last_name, email, password_hash, phone)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, first_name, last_name, email, phone, avatar_url,
-               timezone, locale, is_verified, is_active, created_at`,
-    [data.firstName, data.lastName, data.email, passwordHash, data.phone ?? null]
+  const personResult = await client.query(
+    `INSERT INTO persons (first_name, last_name, phone)
+     VALUES ($1, $2, $3)
+     RETURNING id`,
+    [data.firstName, data.lastName, data.phone ?? null]
   );
-  return result.rows[0];
+
+  const personId = personResult.rows[0].id;
+  const userResult = await client.query(
+    `INSERT INTO users (person_id, email, password_hash)
+     VALUES ($1, $2, $3)
+     RETURNING id`,
+    [personId, data.email, passwordHash]
+  );
+
+  return findUserById(client, userResult.rows[0].id);
 }
 
 export async function updatePasswordHash(client, userId, passwordHash) {
@@ -185,10 +197,7 @@ export async function markResetCodeUsed(client, resetId) {
 }
 
 export async function updatePasswordAndRevokeSessions(client, userId, passwordHash) {
-  await client.query(
-    `UPDATE users SET password_hash = $2 WHERE id = $1`,
-    [userId, passwordHash]
-  );
+  await client.query('UPDATE users SET password_hash = $2 WHERE id = $1', [userId, passwordHash]);
   await client.query(
     `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP
      WHERE user_id = $1 AND revoked_at IS NULL`,

@@ -3,6 +3,7 @@ import cors from 'cors';
 import { env } from './config/env.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import familyRoutes from './modules/family/family.routes.js';
+import familyInvitationRoutes from './modules/family-invitations/familyInvitation.routes.js';
 import vitalSignsRoutes from './modules/vital-signs/vitalSigns.routes.js';
 import epsRoutes from './modules/eps/eps.routes.js';
 import emergencyContactsRoutes from './modules/emergency-contacts/emergencyContact.routes.js';
@@ -42,6 +43,7 @@ app.get('/health', async (req, res) => {
 
 app.use(env.API_PREFIX, authRoutes);
 app.use(env.API_PREFIX, familyRoutes);
+app.use(env.API_PREFIX, familyInvitationRoutes);
 app.use(env.API_PREFIX, vitalSignsRoutes);
 app.use(env.API_PREFIX, epsRoutes);
 app.use(env.API_PREFIX, emergencyContactsRoutes);

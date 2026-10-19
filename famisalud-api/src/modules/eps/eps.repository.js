@@ -1,3 +1,5 @@
+import { personMemberScope } from '../../shared/utils/personMemberScope.js';
+
 export async function listCompanies(client) {
   const result = await client.query(
     `SELECT id, name, code, is_active, created_at
@@ -25,7 +27,7 @@ export async function listPlans(client, memberId) {
             ip.created_at, ip.updated_at
      FROM insurance_plans ip
      JOIN eps_companies e ON e.id = ip.eps_id
-     WHERE ip.member_id = $1 AND ip.deleted_at IS NULL
+     WHERE ${personMemberScope('ip.member_id', '$1')} AND ip.deleted_at IS NULL
      ORDER BY ip.created_at DESC`, [memberId]
   );
   return result.rows;
@@ -38,7 +40,7 @@ export async function findPlanById(client, insurancePlanId, memberId) {
             ip.created_at, ip.updated_at
      FROM insurance_plans ip
      JOIN eps_companies e ON e.id = ip.eps_id
-     WHERE ip.id = $1 AND ip.member_id = $2 AND ip.deleted_at IS NULL
+     WHERE ip.id = $1 AND ${personMemberScope('ip.member_id', '$2')} AND ip.deleted_at IS NULL
      LIMIT 1`, [insurancePlanId, memberId]
   );
   return result.rows[0] ?? null;
@@ -49,7 +51,7 @@ export async function findActivePlanByMember(client, memberId) {
     `SELECT id, member_id, eps_id, plan_number, contributor_type, contact_phone, website, notes,
             created_at, updated_at
      FROM insurance_plans
-     WHERE member_id = $1 AND deleted_at IS NULL
+     WHERE ${personMemberScope('member_id', '$1')} AND deleted_at IS NULL
      ORDER BY created_at DESC
      LIMIT 1
      FOR UPDATE`,
@@ -83,7 +85,7 @@ export async function updatePlan(client, insurancePlanId, memberId, data) {
   const result = await client.query(
     `UPDATE insurance_plans
      SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1 AND member_id = $2 AND deleted_at IS NULL
+     WHERE id = $1 AND ${personMemberScope('member_id', '$2')} AND deleted_at IS NULL
      RETURNING id, member_id, eps_id, plan_number, contributor_type, contact_phone, website, notes,
                created_at, updated_at`,
     [insurancePlanId, memberId, ...values]
@@ -95,7 +97,7 @@ export async function softDeletePlan(client, insurancePlanId, memberId) {
   const result = await client.query(
     `UPDATE insurance_plans
      SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1 AND member_id = $2 AND deleted_at IS NULL
+     WHERE id = $1 AND ${personMemberScope('member_id', '$2')} AND deleted_at IS NULL
      RETURNING id, member_id, eps_id, deleted_at`, [insurancePlanId, memberId]
   );
   return result.rows[0] ?? null;

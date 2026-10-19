@@ -1,3 +1,5 @@
+import { personMemberScope } from '../../shared/utils/personMemberScope.js';
+
 const MEDICATION_SELECT = `
   id, member_id, created_by_user_id, name, presentation,
   dose_amount, dose_unit, instructions, start_date, end_date,
@@ -24,7 +26,7 @@ export async function listMedications(client, memberId) {
   const result = await client.query(
     `SELECT ${MEDICATION_SELECT}
      FROM medications
-     WHERE member_id = $1 AND deleted_at IS NULL
+     WHERE ${personMemberScope('member_id', '$1')} AND deleted_at IS NULL
      ORDER BY clinical_status = 'ACTIVO' DESC, name ASC, created_at DESC`,
     [memberId]
   );
@@ -35,7 +37,7 @@ export async function findMedicationById(client, medicationId, memberId) {
   const result = await client.query(
     `SELECT ${MEDICATION_SELECT}
      FROM medications
-     WHERE id = $1 AND member_id = $2 AND deleted_at IS NULL
+     WHERE id = $1 AND ${personMemberScope('member_id', '$2')} AND deleted_at IS NULL
      LIMIT 1`,
     [medicationId, memberId]
   );
@@ -88,7 +90,7 @@ export async function updateMedication(client, medicationId, memberId, data) {
   const result = await client.query(
     `UPDATE medications
      SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1 AND member_id = $2 AND deleted_at IS NULL
+     WHERE id = $1 AND ${personMemberScope('member_id', '$2')} AND deleted_at IS NULL
      RETURNING ${MEDICATION_SELECT}`,
     [medicationId, memberId, ...values]
   );
@@ -100,7 +102,7 @@ export async function softDeleteMedication(client, medicationId, memberId) {
   const result = await client.query(
     `UPDATE medications
      SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1 AND member_id = $2 AND deleted_at IS NULL
+     WHERE id = $1 AND ${personMemberScope('member_id', '$2')} AND deleted_at IS NULL
      RETURNING id, member_id, deleted_at`,
     [medicationId, memberId]
   );

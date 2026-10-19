@@ -1,12 +1,13 @@
 export async function listRecipients(client, medicationId) {
   const result = await client.query(
     `SELECT rr.id, rr.medication_id, rr.user_id,
-            u.first_name, u.last_name, u.email,
+            p.first_name, p.last_name, u.email,
             rr.created_at
      FROM reminder_recipients rr
      JOIN users u ON u.id = rr.user_id
+     JOIN persons p ON p.id = u.person_id
      WHERE rr.medication_id = $1
-     ORDER BY u.first_name, u.last_name`,
+     ORDER BY p.first_name, p.last_name`,
     [medicationId]
   );
 

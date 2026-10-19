@@ -97,14 +97,22 @@ async function listDueMedicationSchedules(client, now) {
     `SELECT ms.id, ms.medication_id, ms.schedule_type, ms.start_date, ms.end_date,
             ms.hour, ms.days_of_week, ms.interval_hours, ms.day_of_month,
             m.name AS medication_name, m.presentation, m.instructions,
-            m.member_id, fm.first_name AS member_first_name,
-            fm.last_name AS member_last_name, fm.linked_user_id
+            m.member_id, p.first_name AS member_first_name,
+            p.last_name AS member_last_name, member_user.id AS linked_user_id
      FROM medication_schedules ms
      JOIN medications m ON m.id = ms.medication_id
      JOIN family_members fm ON fm.id = m.member_id
+     JOIN persons p ON p.id = fm.person_id
+     LEFT JOIN users member_user ON member_user.person_id = p.id
+       AND member_user.deleted_at IS NULL
      WHERE ms.is_active = TRUE
        AND m.deleted_at IS NULL
-       AND fm.deleted_at IS NULL
+       AND EXISTS (
+         SELECT 1
+         FROM family_members active_profile
+         WHERE active_profile.person_id = fm.person_id
+           AND active_profile.deleted_at IS NULL
+       )
        AND m.clinical_status = 'ACTIVO'
        AND ms.start_date <= $1::date
        AND (ms.end_date IS NULL OR ms.end_date >= $1::date)
@@ -211,10 +219,14 @@ async function listDueAppointmentReminders(client, now) {
 
   const result = await client.query(
     `SELECT a.id, a.member_id, a.title, a.doctor_name, a.location,
-            a.starts_at, fm.family_id, fm.linked_user_id, a.created_by_user_id,
-            fm.first_name AS member_first_name, fm.last_name AS member_last_name
+            a.starts_at, fm.family_id, fm.person_id,
+            member_user.id AS linked_user_id, a.created_by_user_id,
+            p.first_name AS member_first_name, p.last_name AS member_last_name
      FROM appointments a
      JOIN family_members fm ON fm.id = a.member_id
+     JOIN persons p ON p.id = fm.person_id
+     LEFT JOIN users member_user ON member_user.person_id = p.id
+       AND member_user.deleted_at IS NULL
      WHERE a.deleted_at IS NULL
        AND a.status = 'PROGRAMADA'
        AND a.starts_at >= $1
@@ -225,19 +237,23 @@ async function listDueAppointmentReminders(client, now) {
   return result.rows;
 }
 
-async function listAppointmentRecipients(client, { familyId, linkedUserId, createdByUserId }) {
-  // Todas las cuentas ADMINISTRADOR activas de la familia reciben el recordatorio,
-  // independientemente de quién sea el miembro que tiene la cita.
+async function listAppointmentRecipients(client, { personId, linkedUserId, createdByUserId }) {
+  // El historial de citas es global para la persona. Por eso reciben la
+  // notificación los administradores activos de todas las familias que tengan
+  // un perfil activo de esa misma persona, no solo los de la familia del
+  // perfil que originalmente quedó asociado a la cita.
   const adminsResult = await client.query(
-    `SELECT fu.user_id
-     FROM family_users fu
+    `SELECT DISTINCT fu.user_id
+     FROM family_members family_profile
+     JOIN family_users fu ON fu.family_id = family_profile.family_id
      JOIN users u ON u.id = fu.user_id
-     WHERE fu.family_id = $1
+     WHERE family_profile.person_id = $1
+       AND family_profile.deleted_at IS NULL
        AND fu.role = 'ADMINISTRADOR'::family_role_enum
        AND fu.left_at IS NULL
        AND u.is_active = TRUE
        AND u.deleted_at IS NULL`,
-    [familyId]
+    [personId]
   );
 
   const recipients = new Set(adminsResult.rows.map((row) => row.user_id));
@@ -264,7 +280,7 @@ async function processAppointmentReminders(client, now) {
 
   for (const appointment of appointments) {
     const recipients = await listAppointmentRecipients(client, {
-      familyId: appointment.family_id,
+      personId: appointment.person_id,
       linkedUserId: appointment.linked_user_id,
       createdByUserId: appointment.created_by_user_id
     });

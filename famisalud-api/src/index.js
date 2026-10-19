@@ -4,6 +4,7 @@ import { env } from './config/env.js';
 import { pool } from './config/database.js';
 import { runDailyProcessSweep } from './modules/medication-process/medicationProcess.cron.js';
 import { runReminderSweep } from './modules/reminders/reminder.cron.js';
+import { expireInvitationsSweep } from './modules/family-invitations/familyInvitation.service.js';
 
 const server = app.listen(env.PORT, () => {
   console.log(`FamiSalud API ejecutándose en http://localhost:${env.PORT}`);
@@ -26,6 +27,16 @@ const dailySweepTask = cron.schedule(
 
 // Barrido de recordatorios: revisa cada minuto las tomas de medicamentos y
 // las citas que están entrando en su ventana de recordatorio.
+const invitationExpiryTask = cron.schedule(
+  '*/15 * * * *',
+  () => {
+    expireInvitationsSweep().catch((error) => {
+      console.error('[cron] Error al expirar invitaciones familiares:', error);
+    });
+  },
+  { timezone: 'America/Bogota' }
+);
+
 const reminderSweepTask = cron.schedule(
   '* * * * *',
   () => {
@@ -40,6 +51,7 @@ async function shutdown(signal) {
   console.log(`\n${signal}: cerrando servidor...`);
 
   dailySweepTask.stop();
+  invitationExpiryTask.stop();
   reminderSweepTask.stop();
 
   server.close(async () => {

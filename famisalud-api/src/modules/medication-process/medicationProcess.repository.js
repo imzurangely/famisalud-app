@@ -1,3 +1,5 @@
+import { personMemberScope } from '../../shared/utils/personMemberScope.js';
+
 const AUTH_SELECT = `
   ma.id, ma.medication_id,
   ma.previous_authorization_id,
@@ -47,10 +49,12 @@ const DELIVERY_SELECT = `
 
 export async function findMedication(client, medicationId, memberId) {
   const result = await client.query(
-    `SELECT id, member_id, name, dose_amount, dose_unit, instructions,
-            start_date, end_date, clinical_status, management_status
-     FROM medications
-     WHERE id = $1 AND member_id = $2 AND deleted_at IS NULL
+    `SELECT m.id, m.member_id, m.name, m.dose_amount, m.dose_unit, m.instructions,
+            m.start_date, m.end_date, m.clinical_status, m.management_status
+     FROM medications m
+     WHERE m.id = $1
+       AND m.deleted_at IS NULL
+       AND ${personMemberScope('m.member_id', '$2')}
      LIMIT 1`,
     [medicationId, memberId]
   );
@@ -62,14 +66,22 @@ export async function findMedication(client, medicationId, memberId) {
 export async function findMedicationById(client, medicationId) {
   const result = await client.query(
     `SELECT m.id, m.member_id, m.name, m.clinical_status, m.management_status,
-            fm.first_name AS member_first_name,
-            fm.last_name AS member_last_name,
-            fm.linked_user_id
+            p.first_name AS member_first_name,
+            p.last_name AS member_last_name,
+            member_user.id AS linked_user_id
      FROM medications m
      JOIN family_members fm ON fm.id = m.member_id
+     JOIN persons p ON p.id = fm.person_id
+     LEFT JOIN users member_user ON member_user.person_id = p.id
+       AND member_user.deleted_at IS NULL
      WHERE m.id = $1
        AND m.deleted_at IS NULL
-       AND fm.deleted_at IS NULL
+       AND EXISTS (
+         SELECT 1
+         FROM family_members active_profile
+         WHERE active_profile.person_id = fm.person_id
+           AND active_profile.deleted_at IS NULL
+       )
      LIMIT 1`,
     [medicationId]
   );

@@ -43,3 +43,34 @@ function escapeHtml(value) {
     "'": '&#39;'
   })[character]);
 }
+
+export async function sendFamilyInvitationEmail({ to, inviteeName, inviterName, familyName, inviteUrl, expiresAt }) {
+  if (!isConfigured()) {
+    throw new AppError('El servicio de correo no está configurado.', 503);
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_PORT === 465,
+    auth: {
+      user: env.SMTP_USER,
+      pass: env.SMTP_PASSWORD
+    }
+  });
+
+  const greeting = inviteeName ? `Hola ${inviteeName}` : 'Hola';
+  const expiryText = new Date(expiresAt).toLocaleString('es-CO', {
+    timeZone: 'America/Bogota',
+    dateStyle: 'long',
+    timeStyle: 'short'
+  });
+
+  await transporter.sendMail({
+    from: env.SMTP_FROM || env.SMTP_USER,
+    to,
+    subject: `Invitación para unirte a ${familyName} en FamiSalud`,
+    text: `${greeting},\n\n${inviterName} te invitó a unirte a la familia "${familyName}" en FamiSalud.\n\nAcepta o rechaza la invitación usando el siguiente enlace: ${inviteUrl}\n\nLa invitación vence el ${expiryText}. Si no esperabas esta invitación, puedes ignorar este mensaje.`,
+    html: `<p>${escapeHtml(greeting)},</p><p><strong>${escapeHtml(inviterName)}</strong> te invitó a unirte a la familia <strong>${escapeHtml(familyName)}</strong> en FamiSalud.</p><p><a href="${escapeHtml(inviteUrl)}">Consultar invitación</a></p><p>La invitación vence el ${escapeHtml(expiryText)}.</p><p>Si no esperabas esta invitación, puedes ignorar este mensaje.</p>`
+  });
+}

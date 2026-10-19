@@ -1,8 +1,13 @@
+import { personMemberScope } from '../../shared/utils/personMemberScope.js';
+
 export async function findMemberBelongsToFamily(client, memberId) {
   const result = await client.query(
-    `SELECT id, family_id, linked_user_id
-     FROM family_members
-     WHERE id = $1 AND deleted_at IS NULL`,
+    `SELECT fm.id, fm.family_id, linked_user.id AS linked_user_id, fm.person_id
+     FROM family_members fm
+     JOIN persons p ON p.id = fm.person_id
+     LEFT JOIN users linked_user ON linked_user.person_id = p.id
+       AND linked_user.deleted_at IS NULL
+     WHERE fm.id = $1 AND fm.deleted_at IS NULL`,
     [memberId]
   );
 
@@ -30,7 +35,7 @@ export async function findVitalSignById(client, vitalSignId, memberId = null) {
      FROM vital_signs
      WHERE id = $1
        AND deleted_at IS NULL
-       AND ($2::uuid IS NULL OR member_id = $2)
+       AND ($2::uuid IS NULL OR ${personMemberScope('member_id', '$2')})
      LIMIT 1`,
     [vitalSignId, memberId]
   );
@@ -76,7 +81,7 @@ export async function listVitalSigns(client, memberId) {
             oxygen_saturation, blood_glucose, temperature, weight_kg,
             recorded_at, notes, created_at, updated_at
      FROM vital_signs
-     WHERE member_id = $1 AND deleted_at IS NULL
+     WHERE ${personMemberScope('member_id', '$1')} AND deleted_at IS NULL
      ORDER BY recorded_at DESC
      LIMIT 100`,
     [memberId]
