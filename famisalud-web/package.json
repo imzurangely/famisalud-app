@@ -1,7 +1,7 @@
 {
   "name": "famisalud-web",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,9 +15,9 @@
     "react-router-dom": "7.18.3"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
+    "@tailwindcss/vite": "4.3.3",
     "@vitejs/plugin-react": "6.1.2",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "4.3.3",
     "vite": "8.3.4"
   },
   "engines": {

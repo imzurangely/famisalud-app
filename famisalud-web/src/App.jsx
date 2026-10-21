@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { Bell, CalendarDays, FileText, HeartPulse, Pill, UserRound, UsersRound } from 'lucide-react';
 import Sidebar from './components/layout/Sidebar.jsx';
 import Topbar from './components/layout/Topbar.jsx';
 import DashboardPage from './features/dashboard/DashboardPage.jsx';
 import ModulePlaceholder from './features/placeholders/ModulePlaceholder.jsx';
+import LoginPage from './features/auth/LoginPage.jsx';
+import RegisterPage from './features/auth/RegisterPage.jsx';
+import ForgotPasswordPage from './features/auth/ForgotPasswordPage.jsx';
+import ResetPasswordPage from './features/auth/ResetPasswordPage.jsx';
+import FamilySetupPage from './features/auth/FamilySetupPage.jsx';
+import { GuestOnly, RequireAuth } from './components/auth/RouteGuards.jsx';
 
 function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -27,7 +33,12 @@ function AppLayout() {
 export default function App() {
   return (
     <Routes>
-      <Route element={<AppLayout />}>
+      <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
+      <Route path="/registro" element={<GuestOnly><RegisterPage /></GuestOnly>} />
+      <Route path="/recuperar-contrasena" element={<GuestOnly><ForgotPasswordPage /></GuestOnly>} />
+      <Route path="/restablecer-contrasena" element={<GuestOnly><ResetPasswordPage /></GuestOnly>} />
+      <Route path="/configurar-familia" element={<RequireAuth setupOnly><FamilySetupPage /></RequireAuth>} />
+      <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
         <Route index element={<DashboardPage />} />
         <Route path="familia" element={<ModulePlaceholder title="Mi familia" description="Administra los perfiles familiares, consulta las relaciones entre sus integrantes y accede a la información según tu rol." icon={UsersRound} features={['Perfiles familiares', 'Invitaciones', 'Roles y permisos', 'Información personal compartida']} />} />
         <Route path="historia-clinica" element={<ModulePlaceholder title="Historia clínica" description="Consulta la información de salud de forma organizada: antecedentes, alergias, vacunas, signos vitales y otros registros importantes." icon={HeartPulse} features={['Alergias y condiciones', 'Vacunas y signos vitales', 'Contactos de emergencia', 'Planes de salud']} />} />
@@ -36,8 +47,8 @@ export default function App() {
         <Route path="documentos" element={<ModulePlaceholder title="Documentos" description="Organiza documentos clínicos importantes y relaciónalos con la persona y la cita correspondiente." icon={FileText} features={['Subir documentos', 'Consultar archivos', 'Relacionar con citas', 'Acceso según permisos']} />} />
         <Route path="notificaciones" element={<ModulePlaceholder title="Notificaciones" description="Consulta avisos y recordatorios sobre citas, medicamentos y trámites pendientes." icon={Bell} features={['Recordatorios', 'Avisos de citas', 'Estado de trámites', 'Preferencias de notificación']} />} />
         <Route path="perfil" element={<ModulePlaceholder title="Mi perfil" description="Consulta y actualiza tus datos personales y preferencias de la aplicación." icon={UserRound} features={['Datos personales', 'Zona horaria', 'Sesiones', 'Seguridad de la cuenta']} />} />
-        <Route path="*" element={<ModulePlaceholder title="Página no encontrada" description="La sección que buscas no existe o todavía no forma parte de la navegación." icon={HeartPulse} />} />
       </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
