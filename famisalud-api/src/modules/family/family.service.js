@@ -138,10 +138,23 @@ export async function deleteMember(memberId, userId) {
       throw new AppError('Solo un administrador puede eliminar miembros.', 403);
     }
 
+    if (String(member.linked_user_id || '') === String(userId)) {
+      throw new AppError('No puedes retirarte tu propio perfil desde esta acción. Usa la opción para salir de la familia y transfiere la administración si eres el único administrador.', 409);
+    }
+
     const deleted = await repository.softDeleteMember(client, memberId);
 
     if (!deleted) {
       throw new AppError('Miembro no encontrado.', 404);
+    }
+
+    let membershipLeft = null;
+    if (member.linked_user_id) {
+      membershipLeft = await repository.leaveFamilyMembershipForUser(
+        client,
+        member.family_id,
+        member.linked_user_id
+      );
     }
 
     await writeAuditLog(client, {
@@ -150,10 +163,14 @@ export async function deleteMember(memberId, userId) {
       action: 'DELETE',
       entity: 'family_members',
       entityId: memberId,
-      changes: { deletedAt: deleted.deleted_at }
+      changes: {
+        deletedAt: deleted.deleted_at,
+        removedUserId: member.linked_user_id || null,
+        membershipLeftAt: membershipLeft?.left_at || null
+      }
     });
 
-    return deleted;
+    return { ...deleted, membershipLeftAt: membershipLeft?.left_at || null };
   });
 }
 

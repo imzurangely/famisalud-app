@@ -1,4 +1,8 @@
-import { findMemberById, linkMemberToUser as mergeMemberIdentity } from '../family/family.repository.js';
+import {
+  findMemberById,
+  leaveFamilyMembershipForUser as closeFamilyMembership,
+  linkMemberToUser as mergeMemberIdentity
+} from '../family/family.repository.js';
 
 export async function findUserById(client, userId) {
   const result = await client.query(
@@ -38,10 +42,16 @@ export async function findActiveMembership(client, familyId, userId) {
     `SELECT id, family_id, user_id, role
      FROM family_users
      WHERE family_id = $1 AND user_id = $2 AND left_at IS NULL
-     LIMIT 1`,
+     LIMIT 1
+     FOR UPDATE`,
     [familyId, userId]
   );
   return result.rows[0] ?? null;
+}
+
+
+export async function leaveFamilyMembershipForUser(client, familyId, userId) {
+  return closeFamilyMembership(client, familyId, userId);
 }
 
 export async function findMemberForInvitation(client, familyId, memberId) {

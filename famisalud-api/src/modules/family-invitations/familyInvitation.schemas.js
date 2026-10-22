@@ -53,3 +53,7 @@ export const familyInvitationListQuerySchema = z.object({
 export const invitationMineQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50)
 }).strict();
+
+export const invitationPreviewQuerySchema = z.object({
+  token: z.string().min(32).max(200)
+}).strict();

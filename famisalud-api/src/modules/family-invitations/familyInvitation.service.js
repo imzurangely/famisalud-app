@@ -37,6 +37,32 @@ async function auditExpiredRows(client, rows) {
   }
 }
 
+async function hasValidActiveMembershipOrRepair(client, { familyId, userId, auditUserId }) {
+  const membership = await repository.findActiveMembership(client, familyId, userId);
+  if (!membership) return false;
+
+  const linkedMember = await repository.findLinkedMember(client, familyId, userId);
+  if (linkedMember) return true;
+
+  const closed = await repository.leaveFamilyMembershipForUser(client, familyId, userId);
+  if (closed) {
+    await writeAuditLog(client, {
+      userId: auditUserId ?? null,
+      familyId,
+      action: 'REPAIR_STALE_MEMBERSHIP',
+      entity: 'family_users',
+      entityId: closed.id,
+      changes: {
+        reason: 'Se cerró una membresía activa sin perfil familiar activo para permitir una nueva invitación.',
+        old: { left_at: null },
+        new: { left_at: closed.left_at }
+      }
+    });
+  }
+
+  return false;
+}
+
 async function sendInvitationEmailOrMarkFailure({ invitation, token, familyName, inviter, invitee }) {
   let emailSent = false;
   let warning = null;
@@ -100,8 +126,12 @@ export async function createInvitation(familyId, invitedByUserId, data) {
     });
     await auditExpiredRows(client, expiredRows);
 
-    const existingMembership = await repository.findUserByEmail(client, data.email);
-    if (existingMembership && await repository.findActiveMembership(client, familyId, existingMembership.id)) {
+    const existingUser = await repository.findUserByEmail(client, data.email);
+    if (existingUser && await hasValidActiveMembershipOrRepair(client, {
+      familyId,
+      userId: existingUser.id,
+      auditUserId: invitedByUserId
+    })) {
       throw new AppError('Este usuario ya pertenece a la familia.', 409);
     }
 
@@ -111,7 +141,7 @@ export async function createInvitation(familyId, invitedByUserId, data) {
     if (data.memberId) {
       const member = await repository.findMemberForInvitation(client, familyId, data.memberId);
       if (!member) throw new AppError('El miembro indicado no existe en esta familia.', 404);
-      if (member.linked_user_id && (!existingMembership || member.linked_user_id !== existingMembership.id)) {
+      if (member.linked_user_id && (!existingUser || member.linked_user_id !== existingUser.id)) {
         throw new AppError('Ese perfil ya está vinculado a otra cuenta.', 409);
       }
       if (member.relationship !== data.relationship || (member.custom_relationship ?? null) !== (data.customRelationship ?? null)) {
@@ -129,7 +159,7 @@ export async function createInvitation(familyId, invitedByUserId, data) {
       tokenHash
     });
 
-    const invitee = existingMembership;
+    const invitee = existingUser;
     if (invitee) {
       await repository.createNotification(client, {
         userId: invitee.id,
@@ -267,6 +297,32 @@ async function notifyInviter(client, invitation, status, actingUser) {
   });
 }
 
+export async function getInvitationPreview(userId, token) {
+  return withTransaction(async (client) => {
+    const user = await repository.findUserById(client, userId);
+    if (!user) throw new AppError('Usuario no encontrado o inactivo.', 401);
+
+    const invitation = await repository.findInvitationByTokenForUpdate(client, hashToken(token));
+    if (!invitation) throw new AppError('Invitación no encontrada.', 404);
+
+    if (String(user.email).toLowerCase() !== String(invitation.email).toLowerCase()) {
+      throw new AppError('Esta invitación fue enviada a otro correo. Inicia sesión con la cuenta invitada.', 403);
+    }
+
+    return {
+      invitation: {
+        id: invitation.id,
+        familyId: invitation.family_id,
+        familyName: invitation.family_name,
+        status: invitation.status,
+        expiresAt: invitation.expires_at,
+        relationship: invitation.relationship,
+        customRelationship: invitation.custom_relationship
+      }
+    };
+  });
+}
+
 export async function acceptInvitation(userId, data) {
   const outcome = await withTransaction(async (client) => {
     const invitation = await repository.findInvitationByTokenForUpdate(client, hashToken(data.token));
@@ -293,8 +349,13 @@ export async function acceptInvitation(userId, data) {
     }
     if (invitation.status !== 'PENDIENTE') return { error: 'NOT_PENDING', status: invitation.status };
 
-    const existingMembership = await repository.findActiveMembership(client, invitation.family_id, userId);
-    if (existingMembership) return { error: 'ALREADY_MEMBER' };
+    if (await hasValidActiveMembershipOrRepair(client, {
+      familyId: invitation.family_id,
+      userId,
+      auditUserId: userId
+    })) {
+      return { error: 'ALREADY_MEMBER' };
+    }
 
     let member = null;
     if (invitation.member_id) {
@@ -310,8 +371,6 @@ export async function acceptInvitation(userId, data) {
       return { error: 'USER_ALREADY_LINKED' };
     }
 
-    // Cuando la invitación señala un perfil manual, consolidamos su identidad
-    // con la identidad de la cuenta después de que el titular acepta.
     if (member) {
       const linkedMember = await repository.linkMemberToUser(client, member.id, userId);
       if (!linkedMember) throw new AppError('No fue posible vincular la cuenta al perfil.', 409);

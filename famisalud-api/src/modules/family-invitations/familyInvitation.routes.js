@@ -7,6 +7,7 @@ import {
   familyInvitationListQuerySchema,
   familyInvitationParamsSchema,
   invitationMineQuerySchema,
+  invitationPreviewQuerySchema,
   invitationParamsSchema,
   invitationTokenSchema
 } from './familyInvitation.schemas.js';
@@ -14,6 +15,11 @@ import {
 const router = Router();
 router.use(devIdentity);
 
+router.get(
+  '/invitations/preview',
+  validateResource({ query: invitationPreviewQuerySchema }),
+  controller.preview
+);
 router.get(
   '/invitations/mine',
   validateResource({ query: invitationMineQuerySchema }),

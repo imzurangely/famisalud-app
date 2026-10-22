@@ -141,6 +141,19 @@ export async function softDeleteMember(client, memberId) {
   return result.rows[0] ?? null;
 }
 
+export async function leaveFamilyMembershipForUser(client, familyId, userId) {
+  const result = await client.query(
+    `UPDATE family_users
+     SET left_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+     WHERE family_id = $1
+       AND user_id = $2
+       AND left_at IS NULL
+     RETURNING id, family_id, user_id, role, left_at`,
+    [familyId, userId]
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function createFamily(client, { name, isPersonal = false }) {
   const result = await client.query(
     `INSERT INTO families (name, is_personal)
@@ -237,10 +250,8 @@ export async function findLinkedMemberByUser(client, familyId, userId) {
   return result.rows[0] ?? null;
 }
 
-/**
- * Vincula un perfil manual a la identidad de la cuenta tras una acción autorizada.
- * Si ambas identidades eran distintas, las consolida en la identidad de la cuenta.
- */
+/* Vincula un perfil manual a la identidad de la cuenta tras una acción autorizada. 
+Si ambas identidades eran distintas, las consolida en la identidad de la cuenta. */
 export async function linkMemberToUser(client, memberId, userId) {
   const result = await client.query(
     `SELECT fm.id, fm.family_id, fm.person_id AS source_person_id,

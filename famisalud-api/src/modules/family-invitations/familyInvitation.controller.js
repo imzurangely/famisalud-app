@@ -34,6 +34,11 @@ export const listMine = asyncHandler(async (req, res) => {
   res.status(HTTP_STATUS.OK).json({ success: true, data });
 });
 
+export const preview = asyncHandler(async (req, res) => {
+  const data = await service.getInvitationPreview(req.user.id, req.validated.query.token);
+  res.status(HTTP_STATUS.OK).json({ success: true, data });
+});
+
 export const accept = asyncHandler(async (req, res) => {
   const data = await service.acceptInvitation(req.user.id, req.validated.body);
   res.status(HTTP_STATUS.OK).json({ success: true, data });
