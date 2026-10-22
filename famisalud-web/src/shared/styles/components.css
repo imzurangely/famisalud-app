@@ -1,0 +1,3 @@
+/* Estilos globales para componentes que no se expresan solo con utilidades Tailwind. */
+.modal-scroll-lock { overflow: hidden; }
+.focus-ring:focus-visible { outline: 3px solid rgb(37 150 166 / .45); outline-offset: 3px; }

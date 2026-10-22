@@ -1,0 +1,29 @@
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.famisalud-swal-popup {
+  border: 1px solid rgb(226 232 240 / 0.9);
+  border-radius: 1.25rem;
+  box-shadow: 0 24px 80px rgb(15 23 42 / 0.2);
+}
+
+.dark .famisalud-swal-popup {
+  border-color: rgb(51 65 85 / 0.85);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.4);
+}
+
+.famisalud-swal-title {
+  font-family: "Manrope", "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.famisalud-swal-text {
+  font-size: 0.9rem;
+  line-height: 1.65;
+}

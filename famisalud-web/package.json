@@ -1,27 +1,32 @@
 {
   "name": "famisalud-web",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint ."
   },
   "dependencies": {
     "lucide-react": "1.60.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "react-router-dom": "7.18.3"
+    "react-router-dom": "7.18.3",
+    "sonner": "^2.0.8",
+    "sweetalert2": "^11.26.25"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
     "@vitejs/plugin-react": "6.1.2",
+    "eslint": "^10.13.0",
     "tailwindcss": "4.3.3",
     "vite": "8.3.4"
   },
   "engines": {
     "node": ">=24.0.0 <25",
     "npm": ">=11.0.0"
-  }
+  },
+  "description": "Frontend FamiSalud organizado por features y servicios compartidos"
 }
