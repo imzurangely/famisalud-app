@@ -15,5 +15,5 @@ export const mainNavigation = [
   { label: 'Medicamentos y trámites', to: '/medicamentos', icon: Pill },
   { label: 'Citas médicas', to: '/citas', icon: CalendarDays },
   { label: 'Documentos', to: '/documentos', icon: FileText },
-  { label: 'Notificaciones', to: '/notificaciones', icon: Bell, badge: '3' },
+  { label: 'Notificaciones', to: '/notificaciones', icon: Bell },
 ];

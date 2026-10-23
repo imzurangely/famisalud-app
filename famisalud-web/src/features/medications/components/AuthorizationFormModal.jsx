@@ -59,7 +59,7 @@ export default function AuthorizationFormModal({ mode, authorization, medication
     validTo: mode === 'edit' ? initialTo : (mode === 'renewal' ? addMonths(initialFrom, periodicityMonths) : initialTo),
     totalAuthorizedQuantity: String(initialQuantity),
     isHighCost: Boolean(fieldValue(authorization, 'isHighCost')),
-    renewalDaysBefore: fieldValue(authorization, 'renewalDaysBefore') ?? 5,
+    renewalDaysBefore: fieldValue(authorization, 'renewalDaysBefore') ?? 3,
     renewalPeriodicity: initialPeriodicity,
     renewalPhone: fieldValue(authorization, 'renewalPhone') || '',
     renewalWebsite: fieldValue(authorization, 'renewalWebsite') || '',
@@ -157,7 +157,7 @@ export default function AuthorizationFormModal({ mode, authorization, medication
               setValues((current) => ({ ...current, validTo, totalAuthorizedQuantity: quantity === null ? '' : String(quantity) }));
             }} min={values.validFrom} max={toDateInput(fieldValue(medication, 'endDate')) || undefined} required />
             <TextField id="authorization-quantity" label="Entregas autorizadas" type="number" value={values.totalAuthorizedQuantity} onChange={(event) => update('totalAuthorizedQuantity', event.target.value)} min="1" required hint={expectedQuantity === null ? 'Revisa el período y la periodicidad.' : `El período corresponde a ${expectedQuantity} entrega(s).`} />
-            <TextField id="authorization-renewal-days" label="Avisar renovación con (días)" type="number" value={values.renewalDaysBefore} onChange={(event) => update('renewalDaysBefore', event.target.value)} min="0" />
+            <TextField id="authorization-renewal-days" label="Avisar renovación con (días; predeterminado 3)" type="number" value={values.renewalDaysBefore} onChange={(event) => update('renewalDaysBefore', event.target.value)} min="0" />
           </div>
           <label className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">
             <input type="checkbox" checked={values.isHighCost} onChange={(event) => update('isHighCost', event.target.checked)} className="size-4 accent-brand-600" /> Medicamento de alto costo

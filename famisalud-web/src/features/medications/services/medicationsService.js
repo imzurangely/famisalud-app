@@ -94,3 +94,26 @@ export function confirmDeliveryRenewalManaged(memberId, medicationId, deliveryId
 export function collectMedicationDelivery(memberId, medicationId, deliveryId, payload) {
   return apiFetch(`${deliveryPath(memberId, medicationId)}/${deliveryId}/collect`, jsonOptions('POST', payload)).then(unwrapApiData);
 }
+
+
+const reminderRecipientsPath = (memberId, medicationId) =>
+  `${medicationPath(memberId, medicationId)}/reminder-recipients`;
+
+export function listMedicationReminderRecipients(memberId, medicationId) {
+  return apiFetch(reminderRecipientsPath(memberId, medicationId))
+    .then((response) => readApiList(response, ['recipients', 'items']));
+}
+
+export function addMedicationReminderRecipient(memberId, medicationId, userId) {
+  return apiFetch(
+    reminderRecipientsPath(memberId, medicationId),
+    jsonOptions('POST', { userId }),
+  ).then(unwrapApiData);
+}
+
+export function removeMedicationReminderRecipient(memberId, medicationId, userId) {
+  return apiFetch(
+    `${reminderRecipientsPath(memberId, medicationId)}/${userId}`,
+    { method: 'DELETE' },
+  ).then(unwrapApiData);
+}

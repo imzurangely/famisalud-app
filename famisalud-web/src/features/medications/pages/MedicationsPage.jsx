@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowUpRight,
+  BellRing,
   CalendarClock,
   ClipboardList,
   Clock3,
@@ -28,6 +29,7 @@ import ScheduleFormModal from '../components/ScheduleFormModal.jsx';
 import MedicationLogModal from '../components/MedicationLogModal.jsx';
 import AuthorizationFormModal from '../components/AuthorizationFormModal.jsx';
 import CollectDeliveryModal from '../components/CollectDeliveryModal.jsx';
+import MedicationReminderRecipientsPanel from '../components/MedicationReminderRecipientsPanel.jsx';
 import {
   CLINICAL_STATUSES,
   DELIVERY_STATUSES,
@@ -70,6 +72,7 @@ const TABS = [
   { id: 'horarios', label: 'Horarios y tomas', icon: Clock3 },
   { id: 'tramites', label: 'Trámites y recogidas', icon: ClipboardList },
   { id: 'historial', label: 'Historial', icon: History },
+  { id: 'avisos', label: 'Avisos', icon: BellRing },
 ];
 
 function InlineError({ message, onClose }) {
@@ -381,6 +384,11 @@ export default function MedicationsPage() {
             <SectionHeading title="Historial de tomas" description="Eventos registrados para el tratamiento y las fechas en que se realizaron las tomas." />
             <div className="space-y-2">{sortedLogs.map((log) => <MedicationLogRow key={log.id} log={log} canManage={canManageSelected} onEdit={() => openLogForm('edit', log)} />)}{sortedLogs.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-xs text-slate-500 dark:bg-slate-900 dark:text-slate-400">No hay tomas registradas.</p>}</div>
             <div className="border-t border-slate-100 pt-5 dark:border-slate-800"><SectionHeading title="Historial de trámites" description="Solicitudes, autorizaciones, renovaciones y cambios de entrega generados por el backend." /><div className="mt-3 space-y-2">{processHistory.map((event, index) => <div key={event.id || `${fieldValue(event, 'eventType')}-${index}`} className="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/50"><span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-200"><History size={15} /></span><div className="min-w-0 flex-1"><p className="text-xs font-bold text-slate-800 dark:text-slate-100">{humanizeEventType(fieldValue(event, 'eventType'))}</p>{fieldValue(event, 'notes') && <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{fieldValue(event, 'notes')}</p>}<p className="mt-1 text-[10px] text-slate-400">{formatDateTime(fieldValue(event, 'createdAt'))}</p></div></div>)}{processHistory.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-xs text-slate-500 dark:bg-slate-900 dark:text-slate-400">Aún no hay eventos del trámite.</p>}</div></div>
+          </div>}
+
+          {activeTab === 'avisos' && <div className="space-y-4">
+            <div><p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-brand-700 dark:text-brand-300">Recordatorios personalizados</p><h3 className="mt-1 text-sm font-extrabold text-slate-900 dark:text-white">¿Quién debe recibir los avisos?</h3><p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">Elige a los miembros con cuenta que también deben recibir notificaciones de tomas, renovaciones y entregas de este tratamiento.</p></div>
+            <MedicationReminderRecipientsPanel memberId={selectedMemberId} medication={selectedMedication} members={members} canManage={canManageSelected} />
           </div>}
         </div>
       </div>

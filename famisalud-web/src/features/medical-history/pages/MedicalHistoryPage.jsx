@@ -57,7 +57,6 @@ export default function MedicalHistoryPage() {
       HISTORY_SECTIONS[0],
     [section],
   );
-  const ActiveIcon = currentSection.icon;
 
   function openCreate() {
     setModalMode("create");

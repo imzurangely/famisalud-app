@@ -24,6 +24,9 @@ export default [
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         Intl: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+        window: 'readonly',
       },
     },
     rules: {

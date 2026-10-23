@@ -61,7 +61,7 @@ export default function MedicationFormModal({ mode, medication, busy, onClose, o
           <TextField id="medication-name" label="Nombre del medicamento" value={values.name} onChange={(event) => update('name', event.target.value)} required maxLength={150} placeholder="Ej. Losartán" />
           <TextField id="medication-presentation" label="Presentación" value={values.presentation} onChange={(event) => update('presentation', event.target.value)} maxLength={80} placeholder="Ej. Caja por 30 tabletas" />
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
-            <TextField id="medication-dose" label="Dosis" type="number" value={values.doseAmount} onChange={(event) => update('doseAmount', event.target.value)} min="0.01" placeholder="Ej. 50" />
+            <TextField id="medication-dose" label="Dosis" type="number" value={values.doseAmount} onChange={(event) => update('doseAmount', event.target.value)} placeholder="Ej. 50" />
             <SelectField id="medication-unit" label="Unidad" value={values.doseUnit} onChange={(event) => update('doseUnit', event.target.value)} options={ [['', 'Seleccionar'], ...DOSE_UNITS] } />
           </div>
           <SelectField id="medication-status" label="Estado del tratamiento" value={values.clinicalStatus} onChange={(event) => update('clinicalStatus', event.target.value)} options={CLINICAL_STATUSES} required />

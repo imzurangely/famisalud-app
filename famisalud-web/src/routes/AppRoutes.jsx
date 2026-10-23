@@ -1,9 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { Bell } from 'lucide-react';
 import AppLayout from '../shared/components/layout/AppLayout.jsx';
 import RouteLoadingFallback from '../shared/components/layout/RouteLoadingFallback.jsx';
-import ModulePlaceholder from './ModulePlaceholder.jsx';
 import { GuestOnly, RequireAuth } from './RouteGuards.jsx';
 
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage.jsx'));
@@ -21,10 +19,8 @@ const DocumentsPage = lazy(() => import('../features/documents/pages/DocumentsPa
 const MedicationsPage = lazy(() => import('../features/medications/pages/MedicationsPage.jsx'));
 const ProfilePage = lazy(() => import('../features/profile/pages/ProfilePage.jsx'));
 const PreferencesPage = lazy(() => import('../features/profile/pages/PreferencesPage.jsx'));
+const NotificationsPage = lazy(() => import('../features/notifications/pages/NotificationsPage.jsx'));
 
-function PlaceholderRoute({ title, description, icon: Icon, features }) {
-  return <ModulePlaceholder title={title} description={description} icon={Icon} features={features} />;
-}
 
 export default function AppRoutes() {
   return (
@@ -45,7 +41,7 @@ export default function AppRoutes() {
           <Route path="citas" element={<AppointmentsPage />} />
           <Route path="documentos" element={<DocumentsPage />} />
           <Route path="medicamentos" element={<MedicationsPage />} />
-          <Route path="notificaciones" element={<PlaceholderRoute title="Notificaciones" description="El centro de notificaciones se conectará con el backend para mostrar avisos, estados de lectura y recordatorios." icon={Bell} features={['Recordatorios', 'Avisos de citas', 'Avisos de medicamentos']} />} />
+          <Route path="notificaciones" element={<NotificationsPage />} />
           <Route path="perfil" element={<ProfilePage />} />
           <Route path="preferencias" element={<PreferencesPage />} />
         </Route>

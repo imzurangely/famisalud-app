@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   AlertTriangle, Check, KeyRound, LogOut, Mail, MonitorSmartphone,
   Save, ShieldCheck, Trash2, UserRound, UsersRound,
 } from 'lucide-react';
 import Button from '../../../shared/components/ui/Button.jsx';
 import EmptyState from '../../../shared/components/ui/EmptyState.jsx';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../../shared/hooks/useAuth.js';
 import { useFamilies } from '../../../shared/hooks/useFamily.js';
 import { confirmAction, notify } from '../../../shared/utils/feedback.js';

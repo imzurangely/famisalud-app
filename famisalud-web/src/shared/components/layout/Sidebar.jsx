@@ -10,6 +10,7 @@ import { useFamilies } from "../../hooks/useFamily.js";
 import { notify } from "../../utils/feedback.js";
 import { mainNavigation } from "../../../routes/navigation.js";
 import { APP_NAME } from "../../constants/app.js";
+import { useNotificationsSummary } from "../../../features/notifications/context/NotificationsContext.jsx";
 
 export default function Sidebar({ open, onClose }) {
   const {
@@ -19,6 +20,7 @@ export default function Sidebar({ open, onClose }) {
     selectFamily,
     loadingFamilies,
   } = useFamilies();
+  const { unreadCount } = useNotificationsSummary();
   const familyRole = selectedFamily?.role
     ? `Rol: ${selectedFamily.role}`
     : "Gestiona tus espacios";
@@ -43,10 +45,8 @@ export default function Sidebar({ open, onClose }) {
         />
       )}
       <aside
-  className={`fixed inset-y-0 left-0 z-50 flex w-69 flex-col border-r border-slate-200/80 bg-white transition-transform duration-300 dark:border-slate-800 dark:bg-slate-950 ${
-    open ? "translate-x-0" : "-translate-x-full"
-  }`}
->
+        className={`fixed inset-y-0 left-0 z-50 flex w-69 flex-col border-r border-slate-200/80 bg-white transition-transform duration-300 dark:border-slate-800 dark:bg-slate-950 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+      >
         <div className="flex h-20.5 items-center justify-between border-b border-slate-100 px-6 dark:border-slate-800">
           <NavLink to="/" onClick={onClose} className="flex items-center gap-3">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-lg shadow-brand-500/20">
@@ -139,7 +139,7 @@ export default function Sidebar({ open, onClose }) {
             Menú principal
           </p>
           <div className="space-y-1.5">
-            {mainNavigation.map(({ label, to, icon: Icon, end, badge }) => (
+            {mainNavigation.map(({ label, to, icon: Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -157,9 +157,9 @@ export default function Sidebar({ open, onClose }) {
                       <Icon size={18} strokeWidth={1.9} />
                     </span>
                     <span className="min-w-0 flex-1">{label}</span>
-                    {badge && (
-                      <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:bg-violet-950 dark:text-violet-300">
-                        {badge}
+                    {to === '/notificaciones' && unreadCount > 0 && (
+                      <span aria-label={`${unreadCount} notificaciones sin leer`} className="min-w-5 rounded-full bg-violet-100 px-1.5 py-0.5 text-center text-[10px] font-bold text-violet-700 dark:bg-violet-950 dark:text-violet-300">
+                        {unreadCount > 99 ? '99+' : unreadCount}
                       </span>
                     )}
                   </>
