@@ -7,6 +7,7 @@ import {
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  verifyResetCodeSchema,
   sessionParamsSchema
 } from './auth.schemas.js';
 
@@ -17,6 +18,7 @@ router.post('/auth/login', validateResource({ body: loginSchema }), controller.l
 router.post('/auth/refresh', controller.refresh);
 router.post('/auth/logout', controller.logout);
 router.post('/auth/forgot-password', validateResource({ body: forgotPasswordSchema }), controller.forgotPassword);
+router.post('/auth/verify-reset-code', validateResource({ body: verifyResetCodeSchema }), controller.verifyResetCode);
 router.post('/auth/reset-password', validateResource({ body: resetPasswordSchema }), controller.resetPassword);
 
 router.get('/auth/me', devIdentity, controller.me);

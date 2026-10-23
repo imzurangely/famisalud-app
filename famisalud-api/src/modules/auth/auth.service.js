@@ -231,6 +231,38 @@ export async function forgotPassword(email) {
   return response;
 }
 
+export async function verifyResetCode({ email, code }) {
+  const valid = await withTransaction(async (client) => {
+    const user = await repository.findUserByEmail(client, email);
+    if (!user || !user.is_active) return false;
+
+    const reset = await repository.findLatestResetCodeForUpdate(client, user.id);
+    if (!reset || reset.used_at || reset.attempts >= reset.max_attempts || new Date(reset.expires_at) <= new Date()) {
+      if (reset && !reset.used_at && new Date(reset.expires_at) <= new Date()) {
+        await repository.markResetCodeUsed(client, reset.id);
+      }
+      return false;
+    }
+
+    const expected = Buffer.from(reset.code_hash, 'hex');
+    const actual = Buffer.from(hashPasswordResetCode(user.id, code), 'hex');
+    const matches = expected.length === actual.length && timingSafeEqual(expected, actual);
+
+    if (!matches) {
+      await repository.incrementResetAttempts(client, reset.id);
+      return false;
+    }
+
+    return true;
+  });
+
+  if (!valid) {
+    throw new AppError('El código es inválido, expiró o superó el número de intentos permitidos.', 422);
+  }
+
+  return { verified: true };
+}
+
 export async function resetPassword(data) {
   const newPasswordHash = await hashPassword(data.newPassword);
   const result = await withTransaction(async (client) => {
@@ -261,18 +293,4 @@ export async function resetPassword(data) {
 
   if (!result.ok) throw new AppError('El código es inválido, expiró o superó el número de intentos permitidos.', 422);
   return { message: 'Tu contraseña fue actualizada. Inicia sesión nuevamente.' };
-}
-
-export async function assertSessionActive(sessionId, userId) {
-  const result = await query(
-    `SELECT 1
-     FROM refresh_tokens rt
-     JOIN users u ON u.id = rt.user_id
-     WHERE rt.id = $1 AND rt.user_id = $2
-       AND rt.revoked_at IS NULL AND rt.expires_at > CURRENT_TIMESTAMP
-       AND u.is_active = TRUE AND u.deleted_at IS NULL
-     LIMIT 1`,
-    [sessionId, userId]
-  );
-  return Boolean(result.rows[0]);
 }

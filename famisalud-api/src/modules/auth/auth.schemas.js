@@ -32,6 +32,11 @@ export const forgotPasswordSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254)
 }).strict();
 
+export const verifyResetCodeSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  code: z.string().trim().regex(/^\d{6}$/, 'El código debe tener 6 dígitos.')
+}).strict();
+
 export const resetPasswordSchema = z
   .object({
     email: z.string().trim().toLowerCase().email().max(254),

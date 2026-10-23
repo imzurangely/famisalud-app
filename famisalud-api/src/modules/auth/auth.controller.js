@@ -91,6 +91,11 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data });
 });
 
+export const verifyResetCode = asyncHandler(async (req, res) => {
+  const data = await service.verifyResetCode(req.validated.body);
+  res.status(200).json({ success: true, data });
+});
+
 export const resetPassword = asyncHandler(async (req, res) => {
   const data = await service.resetPassword(req.validated.body);
   res.status(200).json({ success: true, data });
