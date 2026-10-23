@@ -117,16 +117,15 @@ function addDays(referenceDate, days) {
   return formatDate(date);
 }
 
-// Meses de calendario entre dos fechas (mismo día o posterior cuenta el mes
-// completo; si el día final es anterior al inicial, el último mes no cuenta
-// completo y se descarta). Se usa solo para validar cantidad de entregas.
+// Ciclos mensuales completos entre dos fechas, siguiendo el mismo
+// desplazamiento de calendario con ajuste al último día del mes que usa la
+// programación real de las entregas. La primera entrega se cuenta aparte:
+// del 2026-10-23 al 2026-11-23 son dos entregas mensuales (octubre y noviembre).
 function monthsBetween(fromStr, toStr) {
   const from = getValidDate(fromStr);
   const to = getValidDate(toStr);
-
   let months = (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth());
-  if (to.getUTCDate() < from.getUTCDate()) months -= 1;
-
+  if (months > 0 && toStr < addMonthsClamped(fromStr, months)) months -= 1;
   return months;
 }
 
@@ -242,13 +241,13 @@ function validateAuthorizationPeriod(data) {
     throw new AppError(`Periodicidad de renovación no reconocida: ${periodicity}.`, 422);
   }
 
-  const totalMonths = monthsBetween(validFrom, validTo);
-  const expectedDeliveries = totalMonths / periodicityMonths;
+  const elapsedMonths = monthsBetween(validFrom, validTo);
+  const expectedDeliveries = elapsedMonths / periodicityMonths + 1;
 
   if (!Number.isInteger(expectedDeliveries) || expectedDeliveries !== totalAuthorizedQuantity) {
     throw new AppError(
       `La cantidad de entregas (${totalAuthorizedQuantity}) no corresponde al período autorizado. ` +
-        `Con periodicidad ${periodicity} entre ${validFrom} y ${validTo} (${totalMonths} meses) deberían ser ${expectedDeliveries} entregas.`,
+        `Con periodicidad ${periodicity} entre ${validFrom} y ${validTo} transcurren ${elapsedMonths} meses completos; contando la primera entrega del inicio, deberían ser ${expectedDeliveries} entregas.`,
       422
     );
   }

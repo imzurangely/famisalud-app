@@ -8,7 +8,10 @@ import {
   registerSchema,
   resetPasswordSchema,
   verifyResetCodeSchema,
-  sessionParamsSchema
+  sessionParamsSchema,
+  updateOwnProfileSchema,
+  updatePreferencesSchema,
+  changePasswordSchema
 } from './auth.schemas.js';
 
 const router = Router();
@@ -22,6 +25,9 @@ router.post('/auth/verify-reset-code', validateResource({ body: verifyResetCodeS
 router.post('/auth/reset-password', validateResource({ body: resetPasswordSchema }), controller.resetPassword);
 
 router.get('/auth/me', devIdentity, controller.me);
+router.patch('/auth/profile', devIdentity, validateResource({ body: updateOwnProfileSchema }), controller.updateOwnProfile);
+router.patch('/auth/preferences', devIdentity, validateResource({ body: updatePreferencesSchema }), controller.updatePreferences);
+router.patch('/auth/password', devIdentity, validateResource({ body: changePasswordSchema }), controller.changePassword);
 router.get('/auth/sessions', devIdentity, controller.listSessions);
 router.delete('/auth/sessions/:sessionId', devIdentity, validateResource({ params: sessionParamsSchema }), controller.revokeSession);
 router.post('/auth/sessions/revoke-all', devIdentity, controller.revokeAllSessions);
