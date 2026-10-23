@@ -4,7 +4,17 @@ export async function listRecipients(client, medicationId) {
             p.first_name, p.last_name, u.email,
             rr.created_at
      FROM reminder_recipients rr
+     JOIN medications m ON m.id = rr.medication_id AND m.deleted_at IS NULL
+     JOIN family_members medication_profile ON medication_profile.id = m.member_id
+       AND medication_profile.deleted_at IS NULL
+     JOIN family_members shared_profile ON shared_profile.person_id = medication_profile.person_id
+       AND shared_profile.deleted_at IS NULL
+     JOIN family_users fu ON fu.family_id = shared_profile.family_id
+       AND fu.user_id = rr.user_id
+       AND fu.left_at IS NULL
      JOIN users u ON u.id = rr.user_id
+       AND u.is_active = TRUE
+       AND u.deleted_at IS NULL
      JOIN persons p ON p.id = u.person_id
      WHERE rr.medication_id = $1
      ORDER BY p.first_name, p.last_name`,
@@ -51,10 +61,13 @@ export async function deleteRecipient(client, medicationId, userId) {
 export async function userIsActiveFamilyMember(client, familyId, userId) {
   const result = await client.query(
     `SELECT 1
-     FROM family_users
-     WHERE family_id = $1
-       AND user_id = $2
-       AND left_at IS NULL
+     FROM family_users fu
+     JOIN users u ON u.id = fu.user_id
+       AND u.is_active = TRUE
+       AND u.deleted_at IS NULL
+     WHERE fu.family_id = $1
+       AND fu.user_id = $2
+       AND fu.left_at IS NULL
      LIMIT 1`,
     [familyId, userId]
   );

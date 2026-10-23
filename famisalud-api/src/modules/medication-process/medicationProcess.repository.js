@@ -73,6 +73,7 @@ export async function findMedicationById(client, medicationId) {
      JOIN family_members fm ON fm.id = m.member_id
      JOIN persons p ON p.id = fm.person_id
      LEFT JOIN users member_user ON member_user.person_id = p.id
+       AND member_user.is_active = TRUE
        AND member_user.deleted_at IS NULL
      WHERE m.id = $1
        AND m.deleted_at IS NULL
@@ -377,8 +378,38 @@ export async function listDeliveriesDueForRenewalReminder(client, referenceDate)
      JOIN medication_authorizations ma ON ma.id = md.authorization_id
      WHERE md.status = 'PROGRAMADA'
        AND md.scheduled_date IS NOT NULL
-       AND ma.renewal_days_before IS NOT NULL
-       AND md.scheduled_date - (ma.renewal_days_before || ' days')::interval <= $1::date`,
+       AND md.scheduled_date - COALESCE(ma.renewal_days_before, 3) <= $1::date`,
+    [referenceDate]
+  );
+  return result.rows;
+}
+
+// Entregas que siguen listas para recoger. El barrido usa este listado para
+// recuperar avisos que no existían antes de desplegar el código de notificaciones;
+// el service deduplica por destinatario, entrega y título.
+export async function listDeliveriesReadyForPickupNotice(client) {
+  const result = await client.query(
+    `SELECT md.id, md.medication_id
+     FROM medication_deliveries md
+     JOIN medications m ON m.id = md.medication_id AND m.deleted_at IS NULL
+     WHERE md.status = 'LISTO_PARA_RECOGER'
+     ORDER BY md.pickup_deadline ASC NULLS LAST, md.created_at ASC`
+  );
+  return result.rows;
+}
+
+// Recuerda la recogida cuando la fecha límite es hoy o mañana. La transición a
+// PERDIDA sigue siendo responsabilidad de listDeliveriesPastDeadline.
+export async function listDeliveriesNearPickupDeadline(client, referenceDate) {
+  const result = await client.query(
+    `SELECT md.id, md.medication_id, md.pickup_deadline
+     FROM medication_deliveries md
+     JOIN medications m ON m.id = md.medication_id AND m.deleted_at IS NULL
+     WHERE md.status = 'LISTO_PARA_RECOGER'
+       AND md.pickup_deadline IS NOT NULL
+       AND md.pickup_deadline >= $1::date
+       AND md.pickup_deadline <= ($1::date + 1)
+     ORDER BY md.pickup_deadline ASC`,
     [referenceDate]
   );
   return result.rows;
@@ -561,20 +592,39 @@ export async function listProcessHistory(client, medicationId, limit) {
 // medicamento (reminder_recipients). Usado tanto por el service como por el cron.
 export async function listReminderRecipients(client, medicationId) {
   const result = await client.query(
-    `SELECT user_id FROM reminder_recipients WHERE medication_id = $1`,
+    `SELECT DISTINCT rr.user_id
+     FROM reminder_recipients rr
+     JOIN users u ON u.id = rr.user_id
+       AND u.is_active = TRUE
+       AND u.deleted_at IS NULL
+     JOIN medications m ON m.id = rr.medication_id
+       AND m.deleted_at IS NULL
+     JOIN family_members medication_profile ON medication_profile.id = m.member_id
+       AND medication_profile.deleted_at IS NULL
+     JOIN family_members shared_profile ON shared_profile.person_id = medication_profile.person_id
+       AND shared_profile.deleted_at IS NULL
+     JOIN family_users fu ON fu.family_id = shared_profile.family_id
+       AND fu.user_id = rr.user_id
+       AND fu.left_at IS NULL
+     WHERE rr.medication_id = $1`,
     [medicationId]
   );
   return result.rows.map((row) => row.user_id);
 }
 
-export async function existsNotificationForEntity(client, { userId, entityId, notificationType }) {
+export async function existsNotificationForEntity(client, { userId, entityId, notificationType, title }) {
+  // Un mismo trámite puede generar eventos distintos (listo para recoger,
+  // renovación vencida y entrega perdida). Si se compara solo entity_id y tipo,
+  // el primer aviso bloquearía incorrectamente los posteriores. Cuando se da
+  // el título, la deduplicación se limita a la misma clase de evento.
   const result = await client.query(
     `SELECT 1 FROM notifications
      WHERE user_id = $1
        AND entity_id = $2
        AND notification_type = $3
+       AND ($4::varchar IS NULL OR title = $4)
      LIMIT 1`,
-    [userId, entityId, notificationType]
+    [userId, entityId, notificationType, title ?? null]
   );
   return result.rows.length > 0;
 }

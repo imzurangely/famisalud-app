@@ -13,6 +13,8 @@
 //   3. PROGRAMADA / RENOVACION_PENDIENTE / LISTO_PARA_RECOGER -> PERDIDA
 //      cuando ya pasó pickup_deadline. PENDIENTE_FARMACIA queda excluida a
 //      propósito: nunca vence por sí sola.
+//   4. Recupera avisos de entregas que ya estaban LISTO_PARA_RECOGER sin aviso
+//      y recuerda recogidas cuya fecha límite es hoy o mañana.
 //
 // Toda la lógica de negocio (descuento de remaining_quantity, generación de
 // la siguiente entrega, notificaciones) vive en medicationProcess.service.js.
@@ -33,7 +35,9 @@ import * as repository from './medicationProcess.repository.js';
 import {
   runRenewalReminderTransition,
   runOverdueRenewalNotification,
-  runDeliveryLossTransition
+  runDeliveryLossTransition,
+  runReadyForPickupNotice,
+  runPickupDeadlineReminder
 } from './medicationProcess.service.js';
 
 function todayDateString() {
@@ -82,11 +86,15 @@ export async function runDailyProcessSweep({ referenceDate = todayDateString() }
   let reminderCandidates;
   let overdueCandidates;
   let deadlineCandidates;
+  let readyForPickupCandidates;
+  let pickupDeadlineCandidates;
 
   try {
     reminderCandidates = await repository.listDeliveriesDueForRenewalReminder(readClient, referenceDate);
     overdueCandidates = await repository.listOverdueUnrenewedDeliveries(readClient, referenceDate);
     deadlineCandidates = await repository.listDeliveriesPastDeadline(readClient, referenceDate);
+    readyForPickupCandidates = await repository.listDeliveriesReadyForPickupNotice(readClient);
+    pickupDeadlineCandidates = await repository.listDeliveriesNearPickupDeadline(readClient, referenceDate);
   } finally {
     readClient.release();
   }
@@ -107,14 +115,24 @@ export async function runDailyProcessSweep({ referenceDate = todayDateString() }
     })
   );
 
+  const readyForPickupErrors = await processEach(readyForPickupCandidates, (client, row) =>
+    runReadyForPickupNotice(client, { deliveryId: row.id, medicationId: row.medication_id })
+  );
+
+  const pickupDeadlineErrors = await processEach(pickupDeadlineCandidates, (client, row) =>
+    runPickupDeadlineReminder(client, { deliveryId: row.id, medicationId: row.medication_id })
+  );
+
   const summary = {
     referenceDate,
     renewalReminders: { processed: reminderCandidates.length, errors: reminderErrors.length },
     overdueNotifications: { processed: overdueCandidates.length, errors: overdueErrors.length },
-    lostDeliveries: { processed: deadlineCandidates.length, errors: lossErrors.length }
+    lostDeliveries: { processed: deadlineCandidates.length, errors: lossErrors.length },
+    readyForPickupNotices: { processed: readyForPickupCandidates.length, errors: readyForPickupErrors.length },
+    pickupDeadlineReminders: { processed: pickupDeadlineCandidates.length, errors: pickupDeadlineErrors.length }
   };
 
-  const allErrors = [...reminderErrors, ...overdueErrors, ...lossErrors];
+  const allErrors = [...reminderErrors, ...overdueErrors, ...lossErrors, ...readyForPickupErrors, ...pickupDeadlineErrors];
   if (allErrors.length > 0) {
     // eslint-disable-next-line no-console
     console.error('[medicationProcess.cron] errores durante el barrido diario:', allErrors);

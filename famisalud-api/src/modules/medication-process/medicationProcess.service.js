@@ -327,6 +327,8 @@ async function generateFirstDelivery(client, medicationId, authorization, userId
     notes: 'Primera entrega generada automáticamente a partir de la fecha de inicio de la autorización.'
   });
 
+  await notifyPickupReady(client, medicationId, delivery.id);
+
   return delivery;
 }
 
@@ -384,10 +386,17 @@ async function closeDeliveryCycle(client, { medication, delivery, userId, baseDa
 // ----------------------------------------------------------------------------
 
 async function notifyRecipients(client, medicationId, { notificationType, title, body, entityId, dedupe = true }) {
-  const [recipients, medication] = await Promise.all([
+  const [configuredRecipients, medication] = await Promise.all([
     repository.listReminderRecipients(client, medicationId),
     repository.findMedicationById(client, medicationId)
   ]);
+
+  // El usuario vinculado al perfil recibe los avisos de su propio tratamiento
+  // por defecto. Los demás destinatarios seleccionados se agregan como copias.
+  const recipients = [...new Set([
+    ...configuredRecipients,
+    ...(medication?.linked_user_id ? [medication.linked_user_id] : [])
+  ])];
 
   const medicationName = medication?.name?.trim() || 'el medicamento';
   const memberName = [medication?.member_first_name, medication?.member_last_name]
@@ -396,15 +405,6 @@ async function notifyRecipients(client, medicationId, { notificationType, title,
     .trim() || 'el miembro de la familia';
 
   for (const userId of recipients) {
-    if (dedupe) {
-      const alreadySent = await repository.existsNotificationForEntity(client, {
-        userId,
-        entityId,
-        notificationType
-      });
-      if (alreadySent) continue;
-    }
-
     const isRecipientTheMedicationOwner = medication?.linked_user_id === userId;
     const notificationContext = { medicationName, memberName, isRecipientTheMedicationOwner };
     const generatedTitle = typeof title === 'function' ? title(notificationContext) : `${title}: ${medicationName}`;
@@ -412,6 +412,16 @@ async function notifyRecipients(client, medicationId, { notificationType, title,
     // exceden el límite, priorizamos conservar el nombre completo del medicamento.
     const notificationTitle = generatedTitle.length <= 150 ? generatedTitle : medicationName.slice(0, 150);
     const notificationBody = typeof body === 'function' ? body(notificationContext) : `${body} Medicamento: ${medicationName}.`;
+
+    if (dedupe) {
+      const alreadySent = await repository.existsNotificationForEntity(client, {
+        userId,
+        entityId,
+        notificationType,
+        title: notificationTitle
+      });
+      if (alreadySent) continue;
+    }
 
     await repository.insertNotification(client, {
       userId,
@@ -422,6 +432,21 @@ async function notifyRecipients(client, medicationId, { notificationType, title,
       entityId
     });
   }
+}
+
+async function notifyPickupReady(client, medicationId, deliveryId) {
+  await notifyRecipients(client, medicationId, {
+    notificationType: 'ENTREGA_MEDICAMENTO',
+    title: ({ medicationName, memberName, isRecipientTheMedicationOwner }) =>
+      isRecipientTheMedicationOwner
+        ? `Ya puedes recoger ${medicationName}`
+        : `${medicationName} listo para recoger para ${memberName}`,
+    body: ({ medicationName, memberName, isRecipientTheMedicationOwner }) =>
+      isRecipientTheMedicationOwner
+        ? `La entrega de ${medicationName} está lista para recoger. Consulta la fecha límite y la farmacia en Medicamentos y trámites.`
+        : `La entrega de ${medicationName} para ${memberName} está lista para recoger. Consulta la fecha límite y la farmacia en Medicamentos y trámites.`,
+    entityId: deliveryId
+  });
 }
 
 // ----------------------------------------------------------------------------
@@ -877,6 +902,8 @@ export async function confirmRenewalManaged(memberId, medicationId, deliveryId, 
       notes: 'El usuario confirmó que ya gestionó la renovación.'
     });
 
+    await notifyPickupReady(client, medicationId, deliveryId);
+
     await writeAuditLog(client, {
       userId,
       familyId: member.family_id,
@@ -1029,6 +1056,35 @@ export async function runDeliveryLossTransition(
       isRecipientTheMedicationOwner
         ? `No se recogió ${medicationName} antes de la fecha límite (${formatDate(new Date(delivery.pickup_deadline))}). ${note}`
         : `No se recogió ${medicationName} para ${memberName} antes de la fecha límite (${formatDate(new Date(delivery.pickup_deadline))}). ${note}`,
+    entityId: deliveryId
+  });
+}
+
+// El barrido diario reintenta el aviso de las entregas que ya estaban en
+// LISTO_PARA_RECOGER antes de desplegar las notificaciones. Es idempotente:
+// notifyRecipients evita crear otra fila para el mismo destinatario y título.
+export async function runReadyForPickupNotice(client, { deliveryId, medicationId }) {
+  const delivery = await repository.findDeliveryById(client, deliveryId, medicationId, true);
+  if (!delivery || delivery.status !== 'LISTO_PARA_RECOGER') return;
+  await notifyPickupReady(client, medicationId, deliveryId);
+}
+
+// Aviso adicional al acercarse la fecha límite de recogida (hoy o mañana).
+export async function runPickupDeadlineReminder(client, { deliveryId, medicationId }) {
+  const delivery = await repository.findDeliveryById(client, deliveryId, medicationId, true);
+  if (!delivery || delivery.status !== 'LISTO_PARA_RECOGER' || !delivery.pickup_deadline) return;
+
+  const deadline = formatDate(delivery.pickup_deadline);
+  await notifyRecipients(client, medicationId, {
+    notificationType: 'ENTREGA_MEDICAMENTO',
+    title: ({ medicationName, memberName, isRecipientTheMedicationOwner }) =>
+      isRecipientTheMedicationOwner
+        ? `Recuerda recoger ${medicationName}`
+        : `Recoge ${medicationName} para ${memberName}`,
+    body: ({ medicationName, memberName, isRecipientTheMedicationOwner }) =>
+      isRecipientTheMedicationOwner
+        ? `La fecha límite para recoger ${medicationName} es ${deadline}. Revisa la farmacia registrada y recógelo antes de esa fecha.`
+        : `La fecha límite para recoger ${medicationName} para ${memberName} es ${deadline}. Revisa la farmacia registrada y recógelo antes de esa fecha.`,
     entityId: deliveryId
   });
 }

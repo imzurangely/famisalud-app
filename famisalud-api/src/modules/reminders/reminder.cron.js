@@ -3,8 +3,7 @@ import { pool } from '../../config/database.js';
 import * as medicationRepository from '../medication-process/medicationProcess.repository.js';
 
 const TIME_ZONE = 'America/Bogota';
-const POLL_MINUTES = 1;
-const APPOINTMENT_REMINDER_MINUTES_BEFORE = 24 * 60;
+const APPOINTMENT_REMINDER_WINDOW_HOURS = 24;
 
 function getLocalParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -104,6 +103,7 @@ async function listDueMedicationSchedules(client, now) {
      JOIN family_members fm ON fm.id = m.member_id
      JOIN persons p ON p.id = fm.person_id
      LEFT JOIN users member_user ON member_user.person_id = p.id
+       AND member_user.is_active = TRUE
        AND member_user.deleted_at IS NULL
      WHERE ms.is_active = TRUE
        AND m.deleted_at IS NULL
@@ -122,8 +122,11 @@ async function listDueMedicationSchedules(client, now) {
   return result.rows;
 }
 
-async function listMedicationRecipients(client, medicationId) {
-  return medicationRepository.listReminderRecipients(client, medicationId);
+async function listMedicationRecipients(client, medicationId, linkedUserId) {
+  const configured = await medicationRepository.listReminderRecipients(client, medicationId);
+  // El titular de un tratamiento con cuenta recibe sus propios recordatorios
+  // de forma predeterminada. Los miembros configurados se agregan como copias.
+  return [...new Set([...configured, ...(linkedUserId ? [linkedUserId] : [])])];
 }
 
 async function existsNotificationForOccurrence(client, { userId, notificationType, entityId }) {
@@ -168,14 +171,18 @@ async function insertNotification(client, data) {
 
 async function processMedicationReminders(client, now) {
   const schedules = await listDueMedicationSchedules(client, now);
+  let dueSchedules = 0;
+  let configuredRecipients = 0;
   let created = 0;
 
   for (const schedule of schedules) {
     const occurrence = scheduleIsDue(schedule, now);
     if (!occurrence) continue;
+    dueSchedules += 1;
 
     const entityId = occurrenceId(`medication-schedule:${schedule.id}:${occurrence}`);
-    const recipients = await listMedicationRecipients(client, schedule.medication_id);
+    const recipients = await listMedicationRecipients(client, schedule.medication_id, schedule.linked_user_id);
+    configuredRecipients += recipients.length;
 
     for (const userId of recipients) {
       const exists = await existsNotificationForOccurrence(client, {
@@ -210,12 +217,32 @@ async function processMedicationReminders(client, now) {
     }
   }
 
-  return { schedules: schedules.length, created };
+  return {
+    schedules: schedules.length,
+    dueSchedules,
+    recipientsConsidered: configuredRecipients,
+    created
+  };
+}
+
+async function countUpcomingAppointments(client, now) {
+  const result = await client.query(
+    `SELECT COUNT(*)::int AS count
+     FROM appointments a
+     JOIN family_members fm ON fm.id = a.member_id AND fm.deleted_at IS NULL
+     WHERE a.deleted_at IS NULL
+       AND a.status IN ('PROGRAMADA', 'REPROGRAMADA')
+       AND a.starts_at > $1`,
+    [now]
+  );
+  return result.rows[0]?.count ?? 0;
 }
 
 async function listDueAppointmentReminders(client, now) {
-  const targetFrom = new Date(now.getTime() + APPOINTMENT_REMINDER_MINUTES_BEFORE * 60_000);
-  const targetTo = new Date(targetFrom.getTime() + POLL_MINUTES * 60_000);
+  // Se procesa cualquier cita futura que ya esté dentro de sus últimas 24 h.
+  // No se usa una ventana de un minuto alrededor de now + 24 h, porque los
+  // milisegundos del cron hacían que una cita con hora exacta quedara fuera.
+  const targetTo = new Date(now.getTime() + APPOINTMENT_REMINDER_WINDOW_HOURS * 60 * 60_000);
 
   const result = await client.query(
     `SELECT a.id, a.member_id, a.title, a.doctor_name, a.location,
@@ -226,12 +253,14 @@ async function listDueAppointmentReminders(client, now) {
      JOIN family_members fm ON fm.id = a.member_id
      JOIN persons p ON p.id = fm.person_id
      LEFT JOIN users member_user ON member_user.person_id = p.id
+       AND member_user.is_active = TRUE
        AND member_user.deleted_at IS NULL
      WHERE a.deleted_at IS NULL
-       AND a.status = 'PROGRAMADA'
-       AND a.starts_at >= $1
-       AND a.starts_at < $2`,
-    [targetFrom, targetTo]
+       AND a.status IN ('PROGRAMADA', 'REPROGRAMADA')
+       AND fm.deleted_at IS NULL
+       AND a.starts_at > $1
+       AND a.starts_at <= $2`,
+    [now, targetTo]
   );
 
   return result.rows;
@@ -275,8 +304,12 @@ async function listAppointmentRecipients(client, { personId, linkedUserId, creat
 }
 
 async function processAppointmentReminders(client, now) {
-  const appointments = await listDueAppointmentReminders(client, now);
+  const [upcoming, appointments] = await Promise.all([
+    countUpcomingAppointments(client, now),
+    listDueAppointmentReminders(client, now)
+  ]);
   let created = 0;
+  let recipientsConsidered = 0;
 
   for (const appointment of appointments) {
     const recipients = await listAppointmentRecipients(client, {
@@ -284,6 +317,7 @@ async function processAppointmentReminders(client, now) {
       linkedUserId: appointment.linked_user_id,
       createdByUserId: appointment.created_by_user_id
     });
+    recipientsConsidered += recipients.length;
     if (recipients.length === 0) continue;
 
     const memberName = `${appointment.member_first_name} ${appointment.member_last_name}`.trim();
@@ -319,7 +353,12 @@ async function processAppointmentReminders(client, now) {
     }
   }
 
-  return { appointments: appointments.length, created };
+  return {
+    upcoming,
+    inReminderWindow: appointments.length,
+    recipientsConsidered,
+    created
+  };
 }
 
 export async function runReminderSweep({ referenceDateTime = new Date() } = {}) {
