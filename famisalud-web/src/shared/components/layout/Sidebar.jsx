@@ -43,8 +43,10 @@ export default function Sidebar({ open, onClose }) {
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-69 flex-col border-r border-slate-200/80 bg-white transition-transform duration-300 dark:border-slate-800 dark:bg-slate-950 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
-      >
+  className={`fixed inset-y-0 left-0 z-50 flex w-69 flex-col border-r border-slate-200/80 bg-white transition-transform duration-300 dark:border-slate-800 dark:bg-slate-950 ${
+    open ? "translate-x-0" : "-translate-x-full"
+  }`}
+>
         <div className="flex h-20.5 items-center justify-between border-b border-slate-100 px-6 dark:border-slate-800">
           <NavLink to="/" onClick={onClose} className="flex items-center gap-3">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-lg shadow-brand-500/20">

@@ -95,6 +95,9 @@ export function useAuthController() {
   }, [clearAuth]);
 
   const markFamilySetupComplete = useCallback(() => setFamilySetupRequired(false), []);
+  const updateUser = useCallback((nextUser) => {
+    setUser((current) => current ? { ...current, ...(nextUser || {}) } : (nextUser || null));
+  }, []);
 
   return useMemo(() => ({
     status,
@@ -106,5 +109,6 @@ export function useAuthController() {
     logout,
     clearAuth,
     markFamilySetupComplete,
-  }), [status, user, familySetupRequired, login, register, logout, clearAuth, markFamilySetupComplete]);
+    updateUser,
+  }), [status, user, familySetupRequired, login, register, logout, clearAuth, markFamilySetupComplete, updateUser]);
 }

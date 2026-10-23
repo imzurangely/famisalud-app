@@ -54,7 +54,7 @@ export default function Topbar({ onMenuClick }) {
   );
   const pageTitle =
     currentPage?.label ||
-    (location.pathname === "/perfil" ? "Mi perfil" : "FamiSalud");
+    (location.pathname === "/perfil" ? "Mi perfil" : location.pathname === "/preferencias" ? "Preferencias" : "FamiSalud");
 
   async function handleLogout() {
     if (loggingOut) return;
@@ -240,7 +240,7 @@ export default function Topbar({ onMenuClick }) {
               <button
                 onClick={() => {
                   setOpenPanel(null);
-                  navigate("/perfil");
+                  navigate("/preferencias");
                 }}
                 className="dropdown-item"
               >

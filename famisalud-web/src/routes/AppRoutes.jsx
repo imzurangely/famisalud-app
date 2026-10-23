@@ -1,12 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import {
-  Bell,
-  HeartPulse,
-  Pill,
-  SlidersHorizontal,
-  UserRound,
-} from 'lucide-react';
+import { Bell } from 'lucide-react';
 import AppLayout from '../shared/components/layout/AppLayout.jsx';
 import RouteLoadingFallback from '../shared/components/layout/RouteLoadingFallback.jsx';
 import ModulePlaceholder from './ModulePlaceholder.jsx';
@@ -24,6 +18,9 @@ const InvitationResponsePage = lazy(() => import('../features/family/pages/Invit
 const MedicalHistoryPage = lazy(() => import('../features/medical-history/pages/MedicalHistoryPage.jsx'));
 const AppointmentsPage = lazy(() => import('../features/appointments/pages/AppointmentsPage.jsx'));
 const DocumentsPage = lazy(() => import('../features/documents/pages/DocumentsPage.jsx'));
+const MedicationsPage = lazy(() => import('../features/medications/pages/MedicationsPage.jsx'));
+const ProfilePage = lazy(() => import('../features/profile/pages/ProfilePage.jsx'));
+const PreferencesPage = lazy(() => import('../features/profile/pages/PreferencesPage.jsx'));
 
 function PlaceholderRoute({ title, description, icon: Icon, features }) {
   return <ModulePlaceholder title={title} description={description} icon={Icon} features={features} />;
@@ -47,10 +44,10 @@ export default function AppRoutes() {
           <Route path="historia-clinica" element={<MedicalHistoryPage />} />
           <Route path="citas" element={<AppointmentsPage />} />
           <Route path="documentos" element={<DocumentsPage />} />
-          <Route path="medicamentos" element={<PlaceholderRoute title="Medicamentos y trámites" description="El módulo conectará los medicamentos, horarios, tomas, autorizaciones, renovaciones y entregas con los endpoints ya probados del backend." icon={Pill} features={['Horarios y registro de tomas', 'Autorizaciones y renovaciones', 'Entregas y recogidas']} />} />
+          <Route path="medicamentos" element={<MedicationsPage />} />
           <Route path="notificaciones" element={<PlaceholderRoute title="Notificaciones" description="El centro de notificaciones se conectará con el backend para mostrar avisos, estados de lectura y recordatorios." icon={Bell} features={['Recordatorios', 'Avisos de citas', 'Avisos de medicamentos']} />} />
-          <Route path="perfil" element={<PlaceholderRoute title="Mi perfil" description="Aquí se administrarán los datos personales y las preferencias de tu cuenta." icon={UserRound} features={['Datos personales', 'Preferencias', 'Sesiones']} />} />
-          <Route path="preferencias" element={<PlaceholderRoute title="Preferencias" description="Próximamente reuniremos aquí las preferencias de visualización y las opciones disponibles para tu cuenta." icon={SlidersHorizontal} features={['Tema de la aplicación', 'Preferencias de avisos', 'Configuración de cuenta']} />} />
+          <Route path="perfil" element={<ProfilePage />} />
+          <Route path="preferencias" element={<PreferencesPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
