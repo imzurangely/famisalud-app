@@ -568,29 +568,6 @@ export default function FamilyPage() {
                 </button>
               </div>
             </div>
-            {selectedFamily && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
-                <div>
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                    {selectedFamily.name}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">
-                    Creada el{" "}
-                    {formatDate(
-                      selectedFamily.created_at || selectedFamily.createdAt,
-                    )}{" "}
-                    ·{" "}
-                    {selectedFamily.is_personal || selectedFamily.isPersonal
-                      ? "Espacio personal"
-                      : "Familia"}
-                  </p>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {members.length}{" "}
-                  {members.length === 1 ? "perfil activo" : "perfiles activos"}
-                </p>
-              </div>
-            )}
           </section>
 
           <section className="space-y-4">
@@ -954,7 +931,7 @@ export default function FamilyPage() {
             )}
 
             {tab === "admin" && isAdmin && (
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+              <div className="grid gap-4">
                 <section className="surface-card p-5 sm:p-6">
                   <div className="flex items-start gap-3">
                     <span className="flex size-11 items-center justify-center rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
@@ -996,72 +973,6 @@ export default function FamilyPage() {
                       {busy ? "Transfiriendo…" : "Transferir administración"}
                     </button>
                   </form>
-                </section>
-                <section className="surface-card p-5 sm:p-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <span className="flex size-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
-                        <FileClock size={20} />
-                      </span>
-                      <div>
-                        <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                          Auditoría de la familia
-                        </h3>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          Acciones administrativas recientes.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      className="icon-button border border-slate-200 dark:border-slate-800"
-                      aria-label="Actualizar auditoría"
-                      onClick={() =>
-                        refreshAuditLogs().catch((error) =>
-                          setNotice({ type: "error", message: error.message }),
-                        )
-                      }
-                    >
-                      <RefreshCw size={15} />
-                    </button>
-                  </div>
-                  {loadingPanel ? (
-                    <p className="mt-5 text-xs text-slate-500">
-                      Cargando auditoría…
-                    </p>
-                  ) : auditLogs.length === 0 ? (
-                    <p className="mt-5 rounded-xl bg-slate-50 p-4 text-xs text-slate-500 dark:bg-slate-900 dark:text-slate-400">
-                      No hay eventos de auditoría para mostrar.
-                    </p>
-                  ) : (
-                    <div className="soft-scrollbar mt-4 max-h-107.5space-y-2 overflow-y-auto">
-                      {auditLogs.map((log) => (
-                        <article
-                          key={log.id}
-                          className="rounded-xl border border-slate-100 p-3 dark:border-slate-800"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-extrabold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                              {log.action}
-                            </span>
-                            <time className="text-[10px] text-slate-400">
-                              {formatDateTime(log.created_at)}
-                            </time>
-                          </div>
-                          <p className="mt-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                            {[log.actor_first_name, log.actor_last_name]
-                              .filter(Boolean)
-                              .join(" ") ||
-                              log.actor_email ||
-                              "Sistema"}{" "}
-                            · {log.entity}
-                          </p>
-                          <p className="mt-1 break-all text-[10px] text-slate-400">
-                            Registro: {log.entity_id || "—"}
-                          </p>
-                        </article>
-                      ))}
-                    </div>
-                  )}
                 </section>
               </div>
             )}
