@@ -429,7 +429,16 @@ async function notifyRecipients(client, medicationId, { notificationType, title,
       title: notificationTitle,
       body: notificationBody,
       entityType: DELIVERY_ENTITY,
-      entityId
+      entityId,
+      metadata: {
+        module: 'medications',
+        destinationTab: 'tramites',
+        memberId: medication?.member_id ?? null,
+        personId: medication?.person_id ?? null,
+        familyId: medication?.family_id ?? null,
+        medicationId,
+        deliveryId: entityId
+      }
     });
   }
 }
@@ -929,8 +938,23 @@ export async function collectDelivery(memberId, medicationId, deliveryId, userId
     }
 
     const pickedUpDate = getValidDate(data.pickedUpDate);
-    if (pickedUpDate > getValidDate(todayDateString())) {
-      throw new AppError('pickedUpDate no puede ser una fecha futura.', 422);
+    const scheduledDate = before.scheduled_date ? getValidDate(before.scheduled_date) : null;
+    const today = getValidDate(todayDateString());
+
+    if (scheduledDate && today < scheduledDate) {
+      throw new AppError(
+        `Todavía no puedes marcar esta entrega como recogida. La fecha programada es ${formatDate(scheduledDate)}.`,
+        422
+      );
+    }
+    if (scheduledDate && pickedUpDate < scheduledDate) {
+      throw new AppError(
+        `La fecha de recogida no puede ser anterior a la fecha programada (${formatDate(scheduledDate)}).`,
+        422
+      );
+    }
+    if (pickedUpDate > today) {
+      throw new AppError('La fecha de recogida no puede ser futura.', 422);
     }
 
     const delivery = await repository.markDeliveryCollected(client, deliveryId, medicationId, data.pickedUpDate, data.notes);

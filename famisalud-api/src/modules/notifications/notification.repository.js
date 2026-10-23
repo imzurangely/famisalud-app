@@ -1,6 +1,6 @@
 const SELECT = `
   id, user_id, notification_type, title, body,
-  entity_type, entity_id, is_read, created_at, read_at
+  entity_type, entity_id, metadata, is_read, created_at, read_at
 `;
 
 export async function list(client, userId, { unreadOnly = false, notificationType, limit = 50 }) {

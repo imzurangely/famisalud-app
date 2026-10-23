@@ -66,6 +66,7 @@ export async function findMedication(client, medicationId, memberId) {
 export async function findMedicationById(client, medicationId) {
   const result = await client.query(
     `SELECT m.id, m.member_id, m.name, m.clinical_status, m.management_status,
+            fm.family_id, p.id AS person_id,
             p.first_name AS member_first_name,
             p.last_name AS member_last_name,
             member_user.id AS linked_user_id
@@ -629,11 +630,14 @@ export async function existsNotificationForEntity(client, { userId, entityId, no
   return result.rows.length > 0;
 }
 
-export async function insertNotification(client, { userId, notificationType, title, body, entityType, entityId }) {
+export async function insertNotification(client, { userId, notificationType, title, body, entityType, entityId, metadata }) {
   await client.query(
     `INSERT INTO notifications (
-      user_id, notification_type, title, body, entity_type, entity_id
-    ) VALUES ($1,$2,$3,$4,$5,$6)`,
-    [userId, notificationType, String(title).slice(0, 150), body ?? null, entityType ?? null, entityId ?? null]
+      user_id, notification_type, title, body, entity_type, entity_id, metadata
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)`,
+    [
+      userId, notificationType, String(title).slice(0, 150), body ?? null,
+      entityType ?? null, entityId ?? null, JSON.stringify(metadata ?? {})
+    ]
   );
 }

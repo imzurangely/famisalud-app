@@ -277,10 +277,10 @@ export async function linkMemberToUser(client, memberId, userId) {
   return mergeMemberIdentity(client, memberId, userId);
 }
 
-export async function createNotification(client, { userId, title, body, entityId }) {
+export async function createNotification(client, { userId, title, body, entityId, metadata = {} }) {
   await client.query(
-    `INSERT INTO notifications (user_id, notification_type, title, body, entity_type, entity_id)
-     VALUES ($1, 'INVITACION_FAMILIA', $2, $3, 'family_invitation', $4)`,
-    [userId, title, body, entityId]
+    `INSERT INTO notifications (user_id, notification_type, title, body, entity_type, entity_id, metadata)
+     VALUES ($1, 'INVITACION_FAMILIA', $2, $3, 'family_invitation', $4, $5::jsonb)`,
+    [userId, title, body, entityId, JSON.stringify(metadata)]
   );
 }

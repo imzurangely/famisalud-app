@@ -165,7 +165,8 @@ export async function createInvitation(familyId, invitedByUserId, data) {
         userId: invitee.id,
         title: `Invitación a ${family.name}`,
         body: `${inviterFullName(inviter)} te invitó a unirte a ${family.name}. Revisa el correo de invitación para responder.`,
-        entityId: invitation.id
+        entityId: invitation.id,
+        metadata: { module: 'family', destinationTab: 'received', familyId: family.id, invitationId: invitation.id }
       });
     }
 
@@ -293,7 +294,8 @@ async function notifyInviter(client, invitation, status, actingUser) {
     userId: invitation.invited_by_user_id,
     title: `Invitación ${status.toLowerCase()}`,
     body: text,
-    entityId: invitation.id
+    entityId: invitation.id,
+    metadata: { module: 'family', destinationTab: 'sent', familyId: invitation.family_id, invitationId: invitation.id }
   });
 }
 

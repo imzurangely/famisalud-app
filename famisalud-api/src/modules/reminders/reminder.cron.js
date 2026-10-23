@@ -96,8 +96,8 @@ async function listDueMedicationSchedules(client, now) {
     `SELECT ms.id, ms.medication_id, ms.schedule_type, ms.start_date, ms.end_date,
             ms.hour, ms.days_of_week, ms.interval_hours, ms.day_of_month,
             m.name AS medication_name, m.presentation, m.instructions,
-            m.member_id, p.first_name AS member_first_name,
-            p.last_name AS member_last_name, member_user.id AS linked_user_id
+            m.member_id, fm.family_id, p.id AS person_id,
+            p.first_name AS member_first_name, p.last_name AS member_last_name, member_user.id AS linked_user_id
      FROM medication_schedules ms
      JOIN medications m ON m.id = ms.medication_id
      JOIN family_members fm ON fm.id = m.member_id
@@ -156,15 +156,16 @@ function buildNotificationTitle(title, subjectName) {
 async function insertNotification(client, data) {
   await client.query(
     `INSERT INTO notifications (
-      user_id, notification_type, title, body, entity_type, entity_id
-    ) VALUES ($1,$2,$3,$4,$5,$6)`,
+      user_id, notification_type, title, body, entity_type, entity_id, metadata
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)`,
     [
       data.userId,
       data.notificationType,
       buildNotificationTitle(data.title, data.subjectName),
       data.body ?? null,
       data.entityType,
-      data.entityId
+      data.entityId,
+      JSON.stringify(data.metadata ?? {})
     ]
   );
 }
@@ -211,7 +212,17 @@ async function processMedicationReminders(client, now) {
         subjectName: schedule.medication_name,
         body,
         entityType: 'MEDICATION_SCHEDULE_OCCURRENCE',
-        entityId
+        entityId,
+        metadata: {
+          module: 'medications',
+          destinationTab: 'horarios',
+          memberId: schedule.member_id,
+          personId: schedule.person_id,
+          familyId: schedule.family_id,
+          medicationId: schedule.medication_id,
+          scheduleId: schedule.id,
+          occurrence
+        }
       });
       created += 1;
     }
@@ -347,7 +358,15 @@ async function processAppointmentReminders(client, now) {
           ? `Tu cita está programada para ${date}.`
           : `La cita de ${memberName} está programada para ${date}.`,
         entityType: 'APPOINTMENT',
-        entityId: appointment.id
+        entityId: appointment.id,
+        metadata: {
+          module: 'appointments',
+          destinationTab: 'appointments',
+          memberId: appointment.member_id,
+          personId: appointment.person_id,
+          familyId: appointment.family_id,
+          appointmentId: appointment.id
+        }
       });
       created += 1;
     }
