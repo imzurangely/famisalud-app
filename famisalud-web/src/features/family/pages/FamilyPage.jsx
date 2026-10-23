@@ -5,7 +5,6 @@ import {
   Clock3,
   Copy,
   Eye,
-  FileClock,
   HeartPulse,
   Mail,
   Pencil,
@@ -76,7 +75,6 @@ export default function FamilyPage() {
     members,
     sentInvitations,
     receivedInvitations,
-    auditLogs,
     loadingMembers,
     loadingPanel,
     busy,
@@ -89,7 +87,6 @@ export default function FamilyPage() {
     resendInvitation,
     transferAdministrator,
     reloadSentInvitations: refreshSentInvitations,
-    reloadAuditLogs: refreshAuditLogs,
   } = useFamilyWorkspace({
     familyId: selectedFamilyId,
     tab,

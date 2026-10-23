@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, LockKeyhole } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import AuthLayout, { BrandMark } from "../components/AuthLayout.jsx";
 import { useAuthAction } from "../hooks/useAuthAction.js";

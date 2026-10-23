@@ -9,6 +9,14 @@ export function requestPasswordReset(email) {
   }).then(unwrapApiData);
 }
 
+export function verifyPasswordResetCode({ email, code }) {
+  return apiFetch('/auth/verify-reset-code', {
+    method: 'POST',
+    body: JSON.stringify({ email: email.trim().toLowerCase(), code: code.trim() }),
+    retryOnAuthFailure: false,
+  }).then(unwrapApiData);
+}
+
 export function resetPasswordRequest({ email, code, newPassword, confirmPassword }) {
   return apiFetch('/auth/reset-password', {
     method: 'POST',

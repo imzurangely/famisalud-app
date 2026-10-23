@@ -9,6 +9,7 @@ const AUTH_ENDPOINTS_WITHOUT_RETRY = new Set([
   '/auth/refresh',
   '/auth/logout',
   '/auth/forgot-password',
+  '/auth/verify-reset-code',
   '/auth/reset-password',
 ]);
 

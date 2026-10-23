@@ -3,7 +3,6 @@ import {
   Moon,
   Sun,
   ShieldCheck,
-  UsersRound,
   Sparkles,
 } from "lucide-react";
 import { Link } from "react-router-dom";

@@ -2,7 +2,6 @@ import {
   ChevronDown,
   HeartPulse,
   Plus,
-  Sparkles,
   UsersRound,
   X,
 } from "lucide-react";
@@ -10,7 +9,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useFamilies } from "../../hooks/useFamily.js";
 import { notify } from "../../utils/feedback.js";
 import { mainNavigation } from "../../../routes/navigation.js";
-import { APP_NAME, APP_VERSION } from "../../constants/app.js";
+import { APP_NAME } from "../../constants/app.js";
 
 export default function Sidebar({ open, onClose }) {
   const {
