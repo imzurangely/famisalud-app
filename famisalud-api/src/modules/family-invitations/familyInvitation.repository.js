@@ -1,7 +1,8 @@
 import {
   findMemberById,
   leaveFamilyMembershipForUser as closeFamilyMembership,
-  linkMemberToUser as mergeMemberIdentity
+  linkMemberToUser as mergeMemberIdentity,
+  deactivatePersonalMembership as deactivatePersonalMembershipForUser
 } from '../family/family.repository.js';
 
 export async function findUserById(client, userId) {
@@ -52,6 +53,10 @@ export async function findActiveMembership(client, familyId, userId) {
 
 export async function leaveFamilyMembershipForUser(client, familyId, userId) {
   return closeFamilyMembership(client, familyId, userId);
+}
+
+export async function deactivatePersonalSpaceForUser(client, userId) {
+  return deactivatePersonalMembershipForUser(client, userId);
 }
 
 export async function findMemberForInvitation(client, familyId, memberId) {

@@ -393,6 +393,7 @@ export async function acceptInvitation(userId, data) {
     if (!member) {
       member = await repository.createLinkedMember(client, invitation, user);
     }
+    await repository.deactivatePersonalSpaceForUser(client, userId);
 
     const accepted = await repository.markInvitationStatus(client, invitation.id, 'ACEPTADA');
     if (!accepted) throw new AppError('La invitación ya no está pendiente.', 409);

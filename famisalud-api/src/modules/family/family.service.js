@@ -183,6 +183,7 @@ export async function createFamily(userId, data) {
     const family = await repository.createFamily(client, data);
     const membership = await repository.addFamilyMembership(client, family.id, userId, 'ADMINISTRADOR');
     const member = await repository.createSelfMember(client, family.id, user);
+    if (!data.isPersonal) await repository.deactivatePersonalMembership(client, userId);
 
     await writeAuditLog(client, {
       userId,

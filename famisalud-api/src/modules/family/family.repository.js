@@ -141,6 +141,54 @@ export async function softDeleteMember(client, memberId) {
   return result.rows[0] ?? null;
 }
 
+/** Oculta/desactiva el espacio personal mientras exista una pertenencia compartida activa. */
+export async function deactivatePersonalMembership(client, userId) {
+  const result = await client.query(
+    `UPDATE family_users personal_membership
+     SET left_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+     FROM families personal_family
+     WHERE personal_membership.family_id = personal_family.id
+       AND personal_family.is_personal = TRUE
+       AND personal_membership.user_id = $1
+       AND personal_membership.left_at IS NULL
+       AND EXISTS (
+         SELECT 1
+         FROM family_users shared_membership
+         JOIN families shared_family ON shared_family.id = shared_membership.family_id
+         WHERE shared_membership.user_id = $1
+           AND shared_membership.left_at IS NULL
+           AND shared_family.is_personal = FALSE
+       )
+     RETURNING personal_membership.id, personal_membership.family_id`,
+    [userId]
+  );
+  return result.rows;
+}
+
+/** Reactiva el espacio personal al salir de la última familia compartida. */
+export async function reactivatePersonalMembershipIfEligible(client, userId) {
+  const result = await client.query(
+    `UPDATE family_users personal_membership
+     SET joined_at = CURRENT_TIMESTAMP, left_at = NULL, updated_at = CURRENT_TIMESTAMP
+     FROM families personal_family
+     WHERE personal_membership.family_id = personal_family.id
+       AND personal_family.is_personal = TRUE
+       AND personal_membership.user_id = $1
+       AND personal_membership.left_at IS NOT NULL
+       AND NOT EXISTS (
+         SELECT 1
+         FROM family_users shared_membership
+         JOIN families shared_family ON shared_family.id = shared_membership.family_id
+         WHERE shared_membership.user_id = $1
+           AND shared_membership.left_at IS NULL
+           AND shared_family.is_personal = FALSE
+       )
+     RETURNING personal_membership.id, personal_membership.family_id`,
+    [userId]
+  );
+  return result.rows;
+}
+
 export async function leaveFamilyMembershipForUser(client, familyId, userId) {
   const result = await client.query(
     `UPDATE family_users
@@ -151,7 +199,9 @@ export async function leaveFamilyMembershipForUser(client, familyId, userId) {
      RETURNING id, family_id, user_id, role, left_at`,
     [familyId, userId]
   );
-  return result.rows[0] ?? null;
+  const membership = result.rows[0] ?? null;
+  if (membership) await reactivatePersonalMembershipIfEligible(client, userId);
+  return membership;
 }
 
 export async function createFamily(client, { name, isPersonal = false }) {
@@ -165,12 +215,26 @@ export async function createFamily(client, { name, isPersonal = false }) {
 }
 
 export async function listFamiliesByUser(client, userId) {
+  // También corrige cuentas que ya pertenecían a una familia antes de este cambio.
+  await deactivatePersonalMembership(client, userId);
   const result = await client.query(
     `SELECT f.id, f.name, f.is_personal, f.created_at, f.updated_at,
             fu.id AS membership_id, fu.role, fu.joined_at
      FROM family_users fu
      JOIN families f ON f.id = fu.family_id
-     WHERE fu.user_id = $1 AND fu.left_at IS NULL
+     WHERE fu.user_id = $1
+       AND fu.left_at IS NULL
+       AND (
+         f.is_personal = FALSE
+         OR NOT EXISTS (
+           SELECT 1
+           FROM family_users shared_membership
+           JOIN families shared_family ON shared_family.id = shared_membership.family_id
+           WHERE shared_membership.user_id = $1
+             AND shared_membership.left_at IS NULL
+             AND shared_family.is_personal = FALSE
+         )
+       )
      ORDER BY fu.joined_at ASC`,
     [userId]
   );
@@ -362,7 +426,9 @@ export async function leaveFamily(client, membershipId) {
      RETURNING id, family_id, user_id, role, left_at`,
     [membershipId]
   );
-  return result.rows[0] ?? null;
+  const membership = result.rows[0] ?? null;
+  if (membership) await reactivatePersonalMembershipIfEligible(client, membership.user_id);
+  return membership;
 }
 
 export async function listAuditLogs(client, familyId, limit = 50) {
