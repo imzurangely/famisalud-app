@@ -128,7 +128,7 @@ export default function GlobalSearch() {
       </div>
       <button type="button" className="icon-button xl:hidden" aria-label="Buscar en FamiSalud" onClick={() => { setMobileOpen(true); setOpen(true); }}><Search size={19} /></button>
       {mobileOpen && (
-        <div className="fixed inset-0 z-90 bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setMobileOpen(false); setOpen(false); } }}>
+        <div className="fixed inset-0 z-90 bg-slate-950/55 p-3 backdrop-blur-sm sm:p-6" role="presentation">
           <section className="mx-auto mt-3 max-w-2xl space-y-3 sm:mt-12" role="dialog" aria-modal="true" aria-label="Buscar en FamiSalud">
             <form onSubmit={submitSearch} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-950">
               <Search size={18} className="shrink-0 text-slate-400" />

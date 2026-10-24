@@ -65,14 +65,8 @@ export default function DocumentPreviewModal({ memberId, document, onClose, onEr
     }
   }
 
-  useEffect(() => {
-    function closeOnEscape(event) { if (event.key === "Escape") onClose(); }
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
-
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} role="presentation">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" role="presentation">
       <section className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950" role="dialog" aria-modal="true" aria-label={`Vista previa de ${fileName}`}>
         <header className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-800 sm:px-5">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-200">{isImage ? <ImageIcon size={18} /> : <FileText size={18} />}</span>

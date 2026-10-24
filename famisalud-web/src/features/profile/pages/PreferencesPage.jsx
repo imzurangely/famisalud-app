@@ -71,17 +71,21 @@ export default function PreferencesPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <header>
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">
-          Tu experiencia
-        </p>
-        <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-          Preferencias
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-          Configura cómo se muestran las fechas y el idioma de tu cuenta. El
-          tema visual se guarda en este navegador.
-        </p>
+      <header className="relative overflow-hidden rounded-3xl module-header-dark p-6 text-white shadow-lg shadow-slate-950/20 sm:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/[0.08]" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
+        <div className="relative z-10">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/75">
+            Tu experiencia
+          </p>
+          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-white">
+            Preferencias
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/75">
+            Configura cómo se muestran las fechas y el idioma de tu cuenta. El
+            tema visual se guarda en este navegador.
+          </p>
+        </div>
       </header>
 
       <section className="surface-card p-5 sm:p-6">

@@ -1,32 +1,15 @@
-import { useEffect } from "react";
 import { X } from "lucide-react";
 
-/** Modal visual reutilizable. La feature conserva sus formularios y su lógica. */
+/** Modal visual reutilizable. Se cierra únicamente desde sus controles explícitos. */
 export default function Modal({
   title,
   description,
   children,
   onClose,
   wide = false,
-  closeOnBackdrop = true,
 }) {
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose?.();
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
   return (
-    <div
-      className="fixed inset-0 z-80 flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-5"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (closeOnBackdrop && event.target === event.currentTarget)
-          onClose?.();
-      }}
-    >
+    <div className="fixed inset-0 z-80 flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="presentation">
       <section
         role="dialog"
         aria-modal="true"

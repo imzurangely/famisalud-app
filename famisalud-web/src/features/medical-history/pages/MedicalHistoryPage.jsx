@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import Button from "../../../shared/components/ui/Button.jsx";
 import EmptyState from "../../../shared/components/ui/EmptyState.jsx";
 import ModuleSearch from "../../../shared/components/ui/ModuleSearch.jsx";
+import CardPagination from "../../../shared/components/ui/CardPagination.jsx";
 import { confirmAction, notify } from "../../../shared/utils/feedback.js";
 import { useMedicalHistory } from "../hooks/useMedicalHistory.js";
 import MedicalRecordCard from "../components/MedicalRecordCard.jsx";
@@ -166,7 +167,7 @@ export default function MedicalHistoryPage() {
 
   return (
     <div className="space-y-6">
-      <header className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+      <header className="relative overflow-hidden rounded-3xl module-header-dark p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
         <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
         <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -401,10 +402,14 @@ export default function MedicalHistoryPage() {
             }
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {visibleRecords.map((record) => (
+          <CardPagination
+            items={visibleRecords}
+            pageSize={6}
+            label="registros clínicos"
+            resetKey={`${section}:${selectedMemberId}:${appliedSearch}:${dateFilter}`}
+            className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+            renderItem={(record) => (
               <MedicalRecordCard
-                key={record.id}
                 section={section}
                 record={record}
                 canManage={canManageSelected}
@@ -412,8 +417,8 @@ export default function MedicalHistoryPage() {
                 onEdit={() => openEdit(record)}
                 onDelete={() => handleDelete(record)}
               />
-            ))}
-          </div>
+            )}
+          />
         )}
       </section>
 

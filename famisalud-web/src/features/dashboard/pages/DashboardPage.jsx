@@ -14,7 +14,6 @@ import {
   Pill,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   TriangleAlert,
   XCircle,
   UsersRound,
@@ -938,7 +937,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-10 sm:space-y-7">
-      <header className="relative overflow-hidden rounded-[28px] bg-linear-to-br from-[#218C9A] via-[#2596A6] to-[#347A9E] px-5 py-6 text-white shadow-xl shadow-brand-900/10 sm:px-8 sm:py-8 lg:px-9">
+      <header className="relative overflow-hidden rounded-[28px] module-header-dark px-5 py-6 text-white shadow-xl shadow-brand-900/10 sm:px-8 sm:py-8 lg:px-9">
         <div className="absolute -right-16 -top-20 size-64 rounded-full border-38 border-white/[0.07]" />
         <div className="absolute -bottom-24 right-[25%] size-48 rounded-full border-28 border-white/6" />
         <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">

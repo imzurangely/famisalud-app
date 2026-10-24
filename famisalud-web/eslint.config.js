@@ -27,6 +27,9 @@ export default [
         URL: 'readonly',
         URLSearchParams: 'readonly',
         window: 'readonly',
+        Blob: 'readonly',
+        File: 'readonly',
+        FileReader: 'readonly'
       },
     },
     rules: {

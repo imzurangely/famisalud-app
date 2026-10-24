@@ -71,6 +71,8 @@ import {
   updateSchedule,
 } from "../services/medicationsService.js";
 import CardActions from "../../../shared/components/ui/CardActions.jsx";
+import CardPagination from "../../../shared/components/ui/CardPagination.jsx";
+import AuthorizationCancelModal from "../components/AuthorizationCancelModal.jsx";
 
 const TABS = [
   { id: "resumen", label: "Resumen", icon: Pill },
@@ -654,6 +656,7 @@ export default function MedicationsPage() {
   const [authorizationModalMode, setAuthorizationModalMode] = useState(null);
   const [currentAuthorization, setCurrentAuthorization] = useState(null);
   const [collectingDelivery, setCollectingDelivery] = useState(null);
+  const [cancelAuthorizationOpen, setCancelAuthorizationOpen] = useState(false);
 
   const activeSchedules = useMemo(
     () =>
@@ -973,24 +976,37 @@ export default function MedicationsPage() {
     const confirmation = await confirmAction({
       title: "¿Anular esta autorización?",
       text: "Se anulará la autorización y, si existe, su entrega abierta. Esta operación quedará en el historial.",
-      confirmButtonText: "Anular autorización",
+      confirmButtonText: "Continuar",
       cancelButtonText: "Conservar",
       icon: "warning",
     });
-    if (!confirmation.isConfirmed) return;
-    const reason = window.prompt("Motivo de la anulación (opcional):");
-    if (reason === null) return;
-    await runProcessAction(
-      "authorization-cancel",
-      () =>
-        cancelAuthorization(
-          selectedMemberId,
-          selectedMedicationId,
-          authorization.id,
-          { reason: reason.trim() || null },
-        ),
-      "Autorización anulada.",
-    );
+    if (confirmation.isConfirmed) setCancelAuthorizationOpen(true);
+  }
+
+  async function submitAuthorizationCancellation(reason) {
+    const authorization = processSummary?.currentAuthorization;
+    if (!authorization) return;
+    setActionBusy("authorization-cancel");
+    try {
+      await cancelAuthorization(
+        selectedMemberId,
+        selectedMedicationId,
+        authorization.id,
+        { reason },
+      );
+      setCancelAuthorizationOpen(false);
+      notify.success("Autorización anulada.");
+      try {
+        await reloadEverything(selectedMedicationId);
+      } catch {
+        notify.error("La autorización se anuló, pero no se pudo actualizar la vista. Intenta recargar la información.");
+      }
+    } catch (requestError) {
+      notify.error(errorMessage(requestError));
+      throw requestError;
+    } finally {
+      setActionBusy("");
+    }
   }
 
   async function handleCollectDelivery(payload) {
@@ -1038,7 +1054,7 @@ export default function MedicationsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+      <header className="relative overflow-hidden rounded-3xl module-header-dark p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
         <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
         <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -1281,14 +1297,17 @@ export default function MedicationsPage() {
             }
           />
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {filteredMedications.map((medication) => (
+          <CardPagination
+            items={filteredMedications}
+            pageSize={6}
+            label="medicamentos"
+            targetItemId={targetMedicationId}
+            resetKey={`${selectedMemberId}:${medicationSearch}:${clinicalStatusFilter}:${managementStatusFilter}`}
+            className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+            renderItem={(medication) => (
               <MedicationCard
-                key={medication.id}
                 medication={medication}
-                selected={
-                  String(medication.id) === String(selectedMedicationId)
-                }
+                selected={String(medication.id) === String(selectedMedicationId)}
                 canManage={canManageSelected}
                 onSelect={() => {
                   setSelectedMedicationId(medication.id);
@@ -1297,8 +1316,8 @@ export default function MedicationsPage() {
                 onEdit={() => openMedicationForm("edit", medication)}
                 onDelete={() => handleMedicationDelete(medication)}
               />
-            ))}
-          </div>
+            )}
+          />
         )}
       </section>
 
@@ -1575,20 +1594,23 @@ export default function MedicationsPage() {
                       }
                     />
                   ) : (
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      {activeSchedules.map((schedule) => (
+                    <CardPagination
+                      items={activeSchedules}
+                      pageSize={6}
+                      label="horarios"
+                      targetItemId={targetScheduleId}
+                      resetKey={`${selectedMedicationId}:${targetScheduleId}`}
+                      className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+                      renderItem={(schedule) => (
                         <ScheduleCard
-                          key={schedule.id}
                           schedule={schedule}
-                          target={
-                            String(schedule.id) === String(targetScheduleId)
-                          }
+                          target={String(schedule.id) === String(targetScheduleId)}
                           canManage={canManageSelected}
                           onEdit={() => openScheduleForm("edit", schedule)}
                           onDelete={() => handleScheduleDelete(schedule)}
                         />
-                      ))}
-                    </div>
+                      )}
+                    />
                   )}
                   <div
                     id="medication-logs"
@@ -1605,7 +1627,7 @@ export default function MedicationsPage() {
                         ) : null
                       }
                     />
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 max-h-[26rem] space-y-2 overflow-y-auto overscroll-contain pr-1">
                       {sortedLogs.map((log) => (
                         <MedicationLogRow
                           key={log.id}
@@ -1680,53 +1702,49 @@ export default function MedicationsPage() {
                       title="Entregas y recogidas"
                       description="Marca cuando la farmacia no tenga existencias, cuando hayas gestionado la renovación o cuando realmente recojas el medicamento."
                     />
-                    <div className="mt-4 grid gap-3 xl:grid-cols-2">
-                      {deliveries.map((delivery) => (
-                        <DeliveryCard
-                          key={delivery.id}
-                          delivery={delivery}
-                          target={
-                            String(delivery.id) === String(targetDeliveryId)
-                          }
-                          canManage={canManageSelected}
-                          busy={Boolean(actionBusy)}
-                          onPendingPharmacy={() =>
-                            runProcessAction(
-                              `delivery-pending-${delivery.id}`,
-                              () =>
-                                markDeliveryPendingPharmacy(
-                                  selectedMemberId,
-                                  selectedMedicationId,
-                                  delivery.id,
-                                ),
-                              "Entrega marcada como pendiente por disponibilidad de farmacia.",
-                            )
-                          }
-                          onConfirmRenewal={() =>
-                            runProcessAction(
-                              `delivery-renewal-${delivery.id}`,
-                              () =>
-                                confirmDeliveryRenewalManaged(
-                                  selectedMemberId,
-                                  selectedMedicationId,
-                                  delivery.id,
-                                ),
-                              "Renovación confirmada. La entrega quedó lista para recoger.",
-                            )
-                          }
-                          onCollect={() => setCollectingDelivery(delivery)}
+                    {deliveries.length === 0 ? (
+                      <div className="mt-4">
+                        <EmptyState
+                          icon={PackageCheck}
+                          title="Aún no hay entregas"
+                          description="Al registrar la autorización aprobada, la primera entrega aparecerá aquí automáticamente."
                         />
-                      ))}
-                      {deliveries.length === 0 && (
-                        <div className="xl:col-span-2">
-                          <EmptyState
-                            icon={PackageCheck}
-                            title="Aún no hay entregas"
-                            description="Al registrar la autorización aprobada, la primera entrega aparecerá aquí automáticamente."
-                          />
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="mt-4">
+                        <CardPagination
+                          items={deliveries}
+                          pageSize={4}
+                          label="entregas"
+                          targetItemId={targetDeliveryId}
+                          resetKey={`${selectedMedicationId}:${targetDeliveryId}`}
+                          className="grid gap-3 xl:grid-cols-2"
+                          renderItem={(delivery) => (
+                            <DeliveryCard
+                              delivery={delivery}
+                              target={String(delivery.id) === String(targetDeliveryId)}
+                              canManage={canManageSelected}
+                              busy={Boolean(actionBusy)}
+                              onPendingPharmacy={() =>
+                                runProcessAction(
+                                  `delivery-pending-${delivery.id}`,
+                                  () => markDeliveryPendingPharmacy(selectedMemberId, selectedMedicationId, delivery.id),
+                                  "Entrega marcada como pendiente por disponibilidad de farmacia.",
+                                )
+                              }
+                              onConfirmRenewal={() =>
+                                runProcessAction(
+                                  `delivery-renewal-${delivery.id}`,
+                                  () => confirmDeliveryRenewalManaged(selectedMemberId, selectedMedicationId, delivery.id),
+                                  "Renovación confirmada. La entrega quedó lista para recoger.",
+                                )
+                              }
+                              onCollect={() => setCollectingDelivery(delivery)}
+                            />
+                          )}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1737,7 +1755,7 @@ export default function MedicationsPage() {
                     title="Historial de tomas"
                     description="Eventos registrados para el tratamiento y las fechas en que se realizaron las tomas."
                   />
-                  <div className="space-y-2">
+                  <div className="max-h-[26rem] space-y-2 overflow-y-auto overscroll-contain pr-1">
                     {sortedLogs.map((log) => (
                       <MedicationLogRow
                         key={log.id}
@@ -1757,7 +1775,7 @@ export default function MedicationsPage() {
                       title="Historial de trámites"
                       description="Solicitudes, autorizaciones, renovaciones y cambios de entrega generados por el backend."
                     />
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 max-h-[26rem] space-y-2 overflow-y-auto overscroll-contain pr-1">
                       {processHistory.map((event, index) => (
                         <div
                           key={
@@ -1885,6 +1903,17 @@ export default function MedicationsPage() {
             }
           }}
           onSubmit={handleAuthorizationSave}
+        />
+      )}
+      {cancelAuthorizationOpen && processSummary?.currentAuthorization && (
+        <AuthorizationCancelModal
+          authorization={processSummary.currentAuthorization}
+          medication={selectedMedication}
+          busy={actionBusy === "authorization-cancel"}
+          onClose={() => {
+            if (actionBusy !== "authorization-cancel") setCancelAuthorizationOpen(false);
+          }}
+          onSubmit={submitAuthorizationCancellation}
         />
       )}
       {collectingDelivery && (

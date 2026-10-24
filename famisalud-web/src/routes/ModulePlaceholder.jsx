@@ -10,16 +10,20 @@ export default function ModulePlaceholder({
   return (
     <div className="mx-auto max-w-4xl py-4 sm:py-8">
       <div className="surface-card overflow-hidden">
-        <div className="border-b border-slate-100 bg-linear-to-r from-brand-50 via-white to-violet-50/70 px-6 py-8 dark:border-slate-800 dark:from-brand-950/40 dark:via-slate-900 dark:to-violet-950/30 sm:px-9 sm:py-10">
-          <span className="flex size-14 items-center justify-center rounded-2xl bg-white text-brand-700 shadow-sm dark:bg-slate-900 dark:text-brand-300">
-            <Icon size={27} />
-          </span>
-          <h2 className="mt-5 font-display text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            {title}
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-            {description}
-          </p>
+        <div className="relative overflow-hidden border-b border-white/10 module-header-dark px-6 py-8 sm:px-9 sm:py-10">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full border-32 border-white/[0.07]" />
+          <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 left-1/3 size-44 rounded-full border-24 border-white/[0.06]" />
+          <div className="relative z-10">
+            <span className="flex size-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white shadow-sm">
+              <Icon size={27} />
+            </span>
+            <h2 className="mt-5 font-display text-2xl font-extrabold tracking-tight text-white">
+              {title}
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/75">
+              {description}
+            </p>
+          </div>
         </div>
         <div className="p-6 sm:p-9">
           <div className="flex gap-3 rounded-2xl border border-amber-100 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">

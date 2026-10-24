@@ -256,3 +256,69 @@ button {
   background: #0b2b33;
   color: #a7e1e6;
 }
+
+/*Encabezados de módulos adaptables al tema activo.
+ El nombre de la clase se conserva para no modificar todas las páginas.*/
+.module-header-dark {
+  /* Tema claro */
+  --module-header-background: linear-gradient(
+    to bottom right,
+    #176d79 0%,
+    #2596a6 52%,
+    #4c82a6 100%
+  );
+  --module-header-foreground: #ffffff;
+  --module-header-muted: rgb(255 255 255 / 0.88);
+  --module-header-glass: rgb(255 255 255 / 0.1);
+  --module-header-decoration: rgb(255 255 255 / 0.08);
+  --module-header-border-strong: rgb(255 255 255 / 0.3);
+
+  background: var(--module-header-background);
+  color: var(--module-header-foreground);
+}
+
+.dark .module-header-dark {
+  --module-header-background: linear-gradient(
+    132deg,
+    #0b2d37 0%,
+    #132c42 54%,
+    #30284f 100%
+  );
+  --module-header-foreground: #f8fafc;
+  --module-header-muted: rgb(226 232 240 / 0.82);
+  --module-header-glass: rgb(255 255 255 / 0.1);
+  --module-header-decoration: rgb(255 255 255 / 0.12);
+  --module-header-border-strong: rgb(255 255 255 / 0.28);
+}
+
+/*
+ * Los encabezados tienen algunas clases text-white explícitas heredadas del
+ * diseño anterior. Estas reglas las traducen a los colores del tema, incluidos
+ * los botones translúcidos y los chips que viven dentro del encabezado.
+ */
+.module-header-dark.text-white,
+.module-header-dark [class~="text-white"],
+.module-header-dark [class~="text-white!"] {
+  color: var(--module-header-foreground) !important;
+}
+
+.module-header-dark [class*="text-white/"] {
+  color: var(--module-header-muted) !important;
+}
+
+.module-header-dark [class*="bg-white/"] {
+  background-color: var(--module-header-glass) !important;
+}
+
+.module-header-dark [class*="border-white/"] {
+  border-color: var(--module-header-decoration) !important;
+}
+
+.module-header-dark [class*="border-white/30"] {
+  border-color: var(--module-header-border-strong) !important;
+}
+
+.dark .module-header-dark .text-brand-800,
+.dark .module-header-dark .text-brand-700 {
+  color: #1b535e;
+}

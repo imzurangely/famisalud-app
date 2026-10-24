@@ -142,7 +142,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+      <header className="relative overflow-hidden rounded-3xl module-header-dark p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
         <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
         <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">

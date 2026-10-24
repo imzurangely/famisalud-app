@@ -1,6 +1,7 @@
 import Select from "../../../shared/components/ui/Select.jsx";
 import PersonAvatar from "../../../shared/components/ui/PersonAvatar.jsx";
 import CardActions from "../../../shared/components/ui/CardActions.jsx";
+import CardPagination from "../../../shared/components/ui/CardPagination.jsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -442,7 +443,7 @@ export default function FamilyPage() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+      <section className="relative overflow-hidden rounded-3xl module-header-dark p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
         <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
         <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -650,8 +651,13 @@ export default function FamilyPage() {
                     }
                   />
                 ) : (
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {members.map((member) => {
+                  <CardPagination
+                    items={members}
+                    pageSize={6}
+                    label="perfiles familiares"
+                    resetKey={`${selectedFamilyId}:${tab}`}
+                    className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                    renderItem={(member) => {
                       const own =
                         String(
                           valueOf(member, "linkedUserId", "linked_user_id"),
@@ -766,8 +772,8 @@ export default function FamilyPage() {
                           />
                         </article>
                       );
-                    })}
-                  </div>
+                    }}
+                  />
                 )}
               </div>
             )}

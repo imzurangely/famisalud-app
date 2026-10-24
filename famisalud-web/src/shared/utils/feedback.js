@@ -50,6 +50,8 @@ export function confirmAction(options = {}) {
     cancelButtonText,
     reverseButtons: true,
     focusCancel: true,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
     buttonsStyling: true,
     confirmButtonColor: '#2596A6',
     cancelButtonColor: '#64748b',

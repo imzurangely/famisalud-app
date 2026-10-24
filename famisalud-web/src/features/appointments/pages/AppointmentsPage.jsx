@@ -11,6 +11,7 @@ import { useFamilies } from "../../../shared/hooks/useFamily.js";
 import Button from "../../../shared/components/ui/Button.jsx";
 import EmptyState from "../../../shared/components/ui/EmptyState.jsx";
 import ModuleSearch from "../../../shared/components/ui/ModuleSearch.jsx";
+import CardPagination from "../../../shared/components/ui/CardPagination.jsx";
 import { confirmAction, notify } from "../../../shared/utils/feedback.js";
 import AppointmentCard from "../components/AppointmentCard.jsx";
 import AppointmentFormModal from "../components/AppointmentFormModal.jsx";
@@ -207,7 +208,7 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+      <header className="relative overflow-hidden rounded-3xl module-header-dark p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
         <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
         <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -401,10 +402,15 @@ export default function AppointmentsPage() {
           action={<Button variant="secondary" onClick={clearSearch}>Limpiar búsqueda</Button>}
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredAppointments.map((appointment) => (
+        <CardPagination
+          items={filteredAppointments}
+          pageSize={6}
+          label="citas"
+          targetItemId={targetAppointmentId}
+          resetKey={`${selectedMemberId}:${appliedSearch}:${statusFilter || ""}`}
+          className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+          renderItem={(appointment) => (
             <AppointmentCard
-              key={appointment.id}
               appointment={appointment}
               isTarget={String(appointment.id) === String(targetAppointmentId)}
               canManage={canManageSelected}
@@ -412,8 +418,8 @@ export default function AppointmentsPage() {
               onDelete={() => handleDelete(appointment)}
               onOpenDocuments={() => openDocuments(appointment)}
             />
-          ))}
-        </div>
+          )}
+        />
       )}
 
       {modalMode && (
