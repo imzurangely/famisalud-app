@@ -12,6 +12,7 @@ import {
   Info,
   MapPin,
   PackageCheck,
+  Pencil,
   Pill,
   Plus,
   RefreshCw,
@@ -23,6 +24,7 @@ import {
 import { useFamilies } from "../../../shared/hooks/useFamily.js";
 import Button from "../../../shared/components/ui/Button.jsx";
 import EmptyState from "../../../shared/components/ui/EmptyState.jsx";
+import ModuleSearch from "../../../shared/components/ui/ModuleSearch.jsx";
 import { confirmAction, notify } from "../../../shared/utils/feedback.js";
 import { useMedications } from "../hooks/useMedications.js";
 import MedicationCard from "../components/MedicationCard.jsx";
@@ -68,6 +70,7 @@ import {
   updateMedicationLog,
   updateSchedule,
 } from "../services/medicationsService.js";
+import CardActions from "../../../shared/components/ui/CardActions.jsx";
 
 const TABS = [
   { id: "resumen", label: "Resumen", icon: Pill },
@@ -166,15 +169,20 @@ function MedicationLogRow({ log, canManage, onEdit }) {
           label={LOG_STATUSES.find(([key]) => key === status)?.[1] || status}
           className={logStatusTone(status)}
         />
-        {canManage && (
-          <button
-            type="button"
-            className="rounded-lg px-2.5 py-2 text-[10px] font-bold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/50"
-            onClick={onEdit}
-          >
-            Editar
-          </button>
-        )}
+        <CardActions
+          className="mt-0 border-t-0 pt-0"
+          actions={[
+            {
+              key: "edit",
+              type: "edit",
+              label: "Editar",
+              icon: Pencil,
+              onClick: onEdit,
+              visible: canManage,
+              showLabel: true,
+            },
+          ]}
+        />
       </div>
     </div>
   );
@@ -211,7 +219,7 @@ function ScheduleCard({
       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
         {scheduleDescription(schedule)}
       </p>
-      <div className="mt-3 space-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+      <div className="mt-3 space-y-1 text-[11px] text-slate-500 dark:text-slate-400 mb-3">
         <p>Desde {formatDate(fieldValue(schedule, "startDate"))}</p>
         <p>
           Hasta{" "}
@@ -220,24 +228,27 @@ function ScheduleCard({
             : "Sin fecha de finalización"}
         </p>
       </div>
-      {canManage && (
-        <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded-lg px-3 py-2 text-[11px] font-bold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/50"
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-lg px-3 py-2 text-[11px] font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/40"
-          >
-            Desactivar
-          </button>
-        </div>
-      )}
+      <CardActions
+        actions={[
+          {
+            key: "edit",
+            type: "edit",
+            label: "Editar medicamento",
+            icon: Pencil,
+            onClick: onEdit,
+            visible: canManage,
+          },
+          {
+            key: "delete",
+            type: "delete",
+            label: "Eliminar horario",
+            icon: Trash2,
+            onClick: onDelete,
+            visible: canManage,
+            showLabel: true,
+          },
+        ]}
+      />
     </article>
   );
 }
@@ -439,14 +450,36 @@ function AuthorizationPanel({
             </div>
             <div className="flex flex-wrap gap-2">
               {canManage && !canceled && Number(remaining ?? 0) > 0 && (
-                <Button variant="secondary" onClick={onEdit} disabled={busy}>
-                  Editar datos
-                </Button>
+                <CardActions
+                  className="mt-0 border-t-0 pt-0"
+                  actions={[
+                    {
+                      key: "edit",
+                      type: "edit",
+                      label: "Editar",
+                      icon: Pencil,
+                      onClick: onEdit,
+                      disabled: busy,
+                      showLabel: true,
+                    },
+                  ]}
+                />
               )}
               {canManage && !canceled && (
-                <Button variant="danger" onClick={onCancel} disabled={busy}>
-                  <Trash2 size={14} /> Anular
-                </Button>
+                <CardActions
+                  className="mt-0 border-t-0 pt-0"
+                  actions={[
+                    {
+                      key: "delete",
+                      type: "delete",
+                      label: "Anular",
+                      icon: Trash2,
+                      onClick: onCancel,
+                      disabled: busy,
+                      showLabel: true,
+                    },
+                  ]}
+                />
               )}
               {canManage && canRenew && (
                 <Button onClick={onRenew} disabled={busy}>
@@ -603,6 +636,10 @@ export default function MedicationsPage() {
   const [activeTab, setActiveTab] = useState(() =>
     TABS.some((tab) => tab.id === targetTab) ? targetTab : "resumen",
   );
+  const [medicationSearchDraft, setMedicationSearchDraft] = useState("");
+  const [medicationSearch, setMedicationSearch] = useState("");
+  const [clinicalStatusFilter, setClinicalStatusFilter] = useState("");
+  const [managementStatusFilter, setManagementStatusFilter] = useState("");
   useEffect(() => {
     setActiveTab(
       TABS.some((tab) => tab.id === targetTab) ? targetTab : "resumen",
@@ -625,6 +662,51 @@ export default function MedicationsPage() {
       ),
     [schedules],
   );
+  const filteredMedications = useMemo(() => {
+    const query = medicationSearch.trim().toLocaleLowerCase("es-CO");
+    return medications.filter((medication) => {
+      const clinicalStatus = fieldValue(medication, "clinicalStatus") || "";
+      const managementStatus =
+        fieldValue(medication, "managementStatus") || "SIN_TRAMITE";
+      if (clinicalStatusFilter && clinicalStatus !== clinicalStatusFilter)
+        return false;
+      if (managementStatusFilter && managementStatus !== managementStatusFilter)
+        return false;
+      if (!query) return true;
+      const searchable = [
+        fieldValue(medication, "name"),
+        fieldValue(medication, "presentation"),
+        fieldValue(medication, "doseAmount"),
+        fieldValue(medication, "doseUnit"),
+        fieldValue(medication, "instruction"),
+        fieldValue(medication, "notes"),
+        fieldValue(medication, "frequency"),
+        clinicalStatus,
+        MANAGEMENT_STATUSES[managementStatus] || managementStatus,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("es-CO");
+      return searchable.includes(query);
+    });
+  }, [
+    medications,
+    medicationSearch,
+    clinicalStatusFilter,
+    managementStatusFilter,
+  ]);
+
+  function clearMedicationSearch() {
+    setMedicationSearchDraft("");
+    setMedicationSearch("");
+  }
+
+  function clearMedicationFilters() {
+    setMedicationSearchDraft("");
+    setMedicationSearch("");
+    setClinicalStatusFilter("");
+    setManagementStatusFilter("");
+  }
   const activeTreatments = medications.filter(
     (medication) => fieldValue(medication, "clinicalStatus") === "ACTIVO",
   ).length;
@@ -971,7 +1053,7 @@ export default function MedicationsPage() {
             )}
             <p className="mt-2 text-sm leading-relaxed text-white/80">
               Organiza tratamientos, registra las tomas y sigue autorizaciones,
-            renovaciones y recogidas desde el mismo lugar.
+              renovaciones y recogidas desde el mismo lugar.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -979,22 +1061,25 @@ export default function MedicationsPage() {
               variant="secondary"
               className="border-white/30! bg-white/10! text-white! hover:bg-white/20!"
               onClick={() =>
-              reloadEverything(selectedMedicationId).catch(() => {})
-            }
-            disabled={refreshing || !selectedMemberId}
-          >
-            <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />{" "}
-            Actualizar
+                reloadEverything(selectedMedicationId).catch(() => {})
+              }
+              disabled={refreshing || !selectedMemberId}
+            >
+              <RefreshCw
+                size={15}
+                className={refreshing ? "animate-spin" : ""}
+              />{" "}
+              Actualizar
             </Button>
             {canManageSelected && (
-            <button
+              <button
                 className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-brand-800 shadow-sm transition hover:bg-brand-50 sm:self-auto"
-              onClick={() => openMedicationForm("create")}
-              disabled={!selectedMemberId}
-            >
-              <Plus size={16} /> Nuevo medicamento
-            </button>
-          )}
+                onClick={() => openMedicationForm("create")}
+                disabled={!selectedMemberId}
+              >
+                <Plus size={16} /> Nuevo medicamento
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -1113,6 +1198,46 @@ export default function MedicationsPage() {
         </div>
       </section>
 
+      <section className="surface-card grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.58fr)_minmax(0,0.72fr)] sm:p-5">
+        <ModuleSearch
+          id="medications-search"
+          value={medicationSearchDraft}
+          onChange={(event) => {
+            setMedicationSearchDraft(event.target.value);
+            setMedicationSearch(event.target.value);
+          }}
+          onClear={clearMedicationSearch}
+          placeholder="Buscar por nombre, dosis o indicaciones…"
+          ariaLabel="Buscar medicamentos"
+        />
+        <Select
+          ariaLabel="Filtrar por estado del tratamiento"
+          className="form-input"
+          value={clinicalStatusFilter}
+          onChange={(event) => setClinicalStatusFilter(event.target.value)}
+        >
+          <option value="">Todos los tratamientos</option>
+          {CLINICAL_STATUSES.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <Select
+          ariaLabel="Filtrar por estado del trámite"
+          className="form-input"
+          value={managementStatusFilter}
+          onChange={(event) => setManagementStatusFilter(event.target.value)}
+        >
+          <option value="">Todos los trámites</option>
+          {Object.entries(MANAGEMENT_STATUSES).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+      </section>
+
       <section className="space-y-4">
         <div>
           {!canManageSelected && selectedMember && (
@@ -1144,9 +1269,20 @@ export default function MedicationsPage() {
               ) : null
             }
           />
+        ) : filteredMedications.length === 0 ? (
+          <EmptyState
+            icon={Pill}
+            title="No encontramos medicamentos"
+            description="Prueba con otra palabra o cambia los filtros de tratamiento y trámite."
+            action={
+              <Button variant="secondary" onClick={clearMedicationFilters}>
+                Limpiar filtros
+              </Button>
+            }
+          />
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {medications.map((medication) => (
+            {filteredMedications.map((medication) => (
               <MedicationCard
                 key={medication.id}
                 medication={medication}
@@ -1230,15 +1366,20 @@ export default function MedicationsPage() {
                         Indicaciones del tratamiento
                       </h3>
                       {canManageSelected && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openMedicationForm("edit", selectedMedication)
-                          }
-                          className="text-[11px] font-bold text-brand-700 hover:underline dark:text-brand-300"
-                        >
-                          Editar datos
-                        </button>
+                        <CardActions
+                          className="mt-0 border-t-0 pt-0"
+                          actions={[
+                            {
+                              key: "edit",
+                              type: "edit",
+                              label: "Editar datos",
+                              icon: Pencil,
+                              onClick: () =>
+                                openMedicationForm("edit", selectedMedication),
+                              showLabel: true,
+                            },
+                          ]}
+                        />
                       )}
                     </div>
                     <p className="mt-3 whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-slate-300">
@@ -1286,13 +1427,21 @@ export default function MedicationsPage() {
                       <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
                         Horarios configurados
                       </h3>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab("horarios")}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:underline dark:text-brand-300"
-                      >
-                        Ver horarios <ArrowUpRight size={13} />
-                      </button>
+                      <CardActions
+                        className="mt-0 border-t-0 pt-0"
+                        actions={[
+                          {
+                            key: "ver-horarios",
+                            type: "view",
+                            label: "Ver horarios",
+                            icon: ArrowUpRight,
+                            onClick: () => setActiveTab("horarios"),
+                            showLabel: true,
+                            className:
+                              "!bg-brand-50 !text-brand-700 dark:!bg-brand-950/50 dark:!text-brand-300 border-none",
+                          },
+                        ]}
+                      />
                     </div>
                     {loadingDetails ? (
                       <div className="mt-4 h-20 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-900" />

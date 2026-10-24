@@ -1,20 +1,22 @@
 import Select from "../../../shared/components/ui/Select.jsx";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   FileText,
   Plus,
   RefreshCw,
-  Search,
   UsersRound,
 } from "lucide-react";
 import { useFamilies } from "../../../shared/hooks/useFamily.js";
 import Button from "../../../shared/components/ui/Button.jsx";
+import ModuleSearch from "../../../shared/components/ui/ModuleSearch.jsx";
 import EmptyState from "../../../shared/components/ui/EmptyState.jsx";
 import { confirmAction, notify } from "../../../shared/utils/feedback.js";
 import DocumentCard from "../components/DocumentCard.jsx";
 import DocumentFormModal from "../components/DocumentFormModal.jsx";
+import DocumentPreviewModal from "../components/DocumentPreviewModal.jsx";
 import { useDocuments } from "../hooks/useDocuments.js";
+import { getDocumentFile } from "../services/documentsService.js";
 import { DOCUMENT_CATEGORIES, memberFullName } from "../utils/documentUtils.js";
 
 function InlineError({ message, onClose }) {
@@ -88,6 +90,7 @@ export default function DocumentsPage() {
   }, [initialAppointmentId, setFilters]);
   const [modalMode, setModalMode] = useState(null);
   const [currentDocument, setCurrentDocument] = useState(null);
+  const [previewDocument, setPreviewDocument] = useState(null);
   const [searchDraft, setSearchDraft] = useState(filters.search || "");
 
   useEffect(() => {
@@ -149,9 +152,26 @@ export default function DocumentsPage() {
     setFilters((current) => ({ ...current, appointmentId: "" }));
   }
 
-  function applySearch(event) {
-    event.preventDefault();
-    setFilters((current) => ({ ...current, search: searchDraft.trim() }));
+  const handlePreviewError = useCallback((message) => {
+    notify.error(message || "No fue posible abrir el documento.");
+  }, []);
+
+  async function handleDownload(documentItem) {
+    try {
+      const blob = await getDocumentFile(selectedMemberId, documentItem.id, { download: true });
+      const fileUrl = URL.createObjectURL(blob);
+      const fileName = documentItem.originalFileName || documentItem.original_file_name || documentItem.title || "documento";
+      const anchor = window.document.createElement("a");
+      anchor.href = fileUrl;
+      anchor.download = fileName;
+      anchor.rel = "noopener";
+      window.document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+    } catch (requestError) {
+      notify.error(requestError?.message || "No fue posible descargar el documento.");
+    }
   }
 
   if (families.length === 0 && !loadingFamilyCollection) {
@@ -291,22 +311,21 @@ export default function DocumentsPage() {
       <InlineError message={error} onClose={clearError} />
 
       <section className="surface-card grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.75fr)_minmax(0,0.75fr)] sm:p-5">
-        <form className="flex items-center gap-2" onSubmit={applySearch}>
-          <label className="sr-only" htmlFor="documents-search">
-            Buscar documento por título
-          </label>
-          <input
-            id="documents-search"
-            className="form-input min-w-0"
-            value={searchDraft}
-            onChange={(event) => setSearchDraft(event.target.value)}
-            maxLength={100}
-            placeholder="Buscar por título…"
-          />
-          <Button type="submit" variant="secondary" className="shrink-0 px-3">
-            <Search size={15} /> Buscar
-          </Button>
-        </form>
+        <ModuleSearch
+          id="documents-search"
+          value={searchDraft}
+          onChange={(event) => {
+            const value = event.target.value;
+            setSearchDraft(value);
+            setFilters((current) => ({ ...current, search: value }));
+          }}
+          onClear={() => {
+            setSearchDraft("");
+            setFilters((current) => ({ ...current, search: "" }));
+          }}
+          placeholder="Buscar por título…"
+          ariaLabel="Buscar documentos por título"
+        />
         <label className="block">
           <span className="sr-only">Filtrar por categoría</span>
           <Select
@@ -420,9 +439,20 @@ export default function DocumentsPage() {
               canManage={canManageSelected}
               onEdit={() => openEdit(document)}
               onDelete={() => handleDelete(document)}
+              onPreview={() => setPreviewDocument(document)}
+              onDownload={() => handleDownload(document)}
             />
           ))}
         </div>
+      )}
+
+      {previewDocument && selectedMemberId && (
+        <DocumentPreviewModal
+          memberId={selectedMemberId}
+          document={previewDocument}
+          onClose={() => setPreviewDocument(null)}
+          onError={handlePreviewError}
+        />
       )}
 
       {modalMode && (

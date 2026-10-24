@@ -10,6 +10,7 @@ import {
 import { Link } from "react-router-dom";
 import Button from "../../../shared/components/ui/Button.jsx";
 import EmptyState from "../../../shared/components/ui/EmptyState.jsx";
+import ModuleSearch from "../../../shared/components/ui/ModuleSearch.jsx";
 import { confirmAction, notify } from "../../../shared/utils/feedback.js";
 import { useMedicalHistory } from "../hooks/useMedicalHistory.js";
 import MedicalRecordCard from "../components/MedicalRecordCard.jsx";
@@ -51,12 +52,46 @@ export default function MedicalHistoryPage() {
   } = useMedicalHistory();
   const [modalRecord, setModalRecord] = useState(null);
   const [modalMode, setModalMode] = useState(null);
+  const [searchDraft, setSearchDraft] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
   const currentSection = useMemo(
     () =>
       HISTORY_SECTIONS.find((item) => item.id === section) ||
       HISTORY_SECTIONS[0],
     [section],
   );
+  const visibleRecords = useMemo(() => {
+    const query = appliedSearch.trim().toLocaleLowerCase("es-CO");
+    const cutoff = dateFilter
+      ? new Date(Date.now() - Number(dateFilter) * 24 * 60 * 60 * 1000)
+      : null;
+
+    return records.filter((record) => {
+      const searchText = Object.entries(record || {})
+        .filter(([key, value]) =>
+          !/(^id$|_id$|password|token|deleted_at|updated_at)/i.test(key) &&
+          value !== null &&
+          value !== undefined &&
+          ["string", "number", "boolean"].includes(typeof value),
+        )
+        .map(([, value]) => String(value))
+        .join(" ")
+        .toLocaleLowerCase("es-CO");
+      if (query && !searchText.includes(query)) return false;
+      if (!cutoff) return true;
+
+      const rawDate =
+        fieldValue(record, "recordedAt") ||
+        fieldValue(record, "applicationDate") ||
+        fieldValue(record, "vaccinationDate") ||
+        fieldValue(record, "dateAdministered") ||
+        fieldValue(record, "measuredAt") ||
+        fieldValue(record, "createdAt");
+      const date = rawDate ? new Date(rawDate) : null;
+      return Boolean(date && !Number.isNaN(date.getTime()) && date >= cutoff);
+    });
+  }, [records, appliedSearch, dateFilter]);
 
   function openCreate() {
     setModalMode("create");
@@ -145,7 +180,7 @@ export default function MedicalHistoryPage() {
               </h1>
             )}
             <p className="mt-2 text-sm leading-relaxed text-white/80">
-              Consulta y registra información clínica como alergias, vacunas, condiciones y signos vitales
+              Consulta y registra información clínica como alergias, vacunas, diagnósticos y signos vitales
               de las personas a las que tienes acceso
             </p>
           </div>
@@ -269,6 +304,32 @@ export default function MedicalHistoryPage() {
           ))}
         </div>
 
+        <div className="surface-card grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.42fr)] sm:p-5">
+          <ModuleSearch
+            id="medical-history-search"
+            value={searchDraft}
+            onChange={(event) => {
+              setSearchDraft(event.target.value);
+              setAppliedSearch(event.target.value);
+            }}
+            onClear={() => { setSearchDraft(""); setAppliedSearch(""); }}
+            placeholder={`Buscar en ${currentSection.label.toLowerCase()}…`}
+            ariaLabel={`Buscar en ${currentSection.label.toLowerCase()}`}
+          />
+          <Select
+            ariaLabel="Filtrar historia clínica por fecha"
+            value={dateFilter}
+            onChange={(event) => setDateFilter(event.target.value)}
+            placeholder="Cualquier fecha"
+            className="form-input"
+          >
+            <option value="">Cualquier fecha</option>
+            <option value="30">Últimos 30 días</option>
+            <option value="90">Últimos 3 meses</option>
+            <option value="365">Último año</option>
+          </Select>
+        </div>
+
         <div>
           {!canManageSelected && selectedMember && (
             <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
@@ -328,9 +389,20 @@ export default function MedicalHistoryPage() {
               ) : null
             }
           />
+        ) : visibleRecords.length === 0 ? (
+          <EmptyState
+            icon={Activity}
+            title="No encontramos registros"
+            description="Prueba con otra palabra o amplía el período seleccionado."
+            action={
+              <Button variant="secondary" onClick={() => { setSearchDraft(""); setAppliedSearch(""); setDateFilter(""); }}>
+                Limpiar filtros
+              </Button>
+            }
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {records.map((record) => (
+            {visibleRecords.map((record) => (
               <MedicalRecordCard
                 key={record.id}
                 section={section}

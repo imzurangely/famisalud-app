@@ -2,7 +2,7 @@ import { Activity, ClipboardCheck, HeartPulse, ShieldAlert } from 'lucide-react'
 
 export const HISTORY_SECTIONS = [
   { id: 'allergies', label: 'Alergias', icon: ShieldAlert, description: 'Alergias conocidas y reacciones registradas.' },
-  { id: 'conditions', label: 'Condiciones', icon: HeartPulse, description: 'Diagnósticos y condiciones médicas.' },
+  { id: 'conditions', label: 'Diagnósticos', icon: HeartPulse, description: 'Diagnósticos y condiciones médicas.' },
   { id: 'vaccines', label: 'Vacunas', icon: ClipboardCheck, description: 'Dosis aplicadas y próximas dosis.' },
   { id: 'vital-signs', label: 'Signos vitales', icon: Activity, description: 'Mediciones registradas a lo largo del tiempo.' },
 ];

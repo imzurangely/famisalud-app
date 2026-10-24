@@ -22,6 +22,7 @@ import {
   listMedicationReminderRecipients,
   removeMedicationReminderRecipient,
 } from "../services/medicationsService.js";
+import CardActions from "../../../shared/components/ui/CardActions.jsx";
 
 export default function MedicationReminderRecipientsPanel({
   memberId,
@@ -262,17 +263,22 @@ export default function MedicationReminderRecipientsPanel({
                       </p>
                     </div>
                   </div>
-                  {canManage && (
-                    <Button
-                      variant="danger"
-                      className="min-h-9! px-3! py-2! sm:self-auto"
-                      disabled={Boolean(busy)}
-                      onClick={() => handleRemove(recipient)}
-                    >
-                      <Trash2 size={13} />{" "}
-                      {busy === userId ? "Retirando…" : "Retirar"}
-                    </Button>
-                  )}
+                    <CardActions
+                      className="mt-0 border-t-0 pt-0"
+                      actions={[
+                        {
+                          key: "retirar",
+                          type: "delete",
+                          label: busy === userId ? "Retirando…" : "Retirar",
+                          icon: Trash2,
+                          onClick: () => handleRemove(recipient),
+                          visible: canManage,
+                          disabled: Boolean(busy),
+                          showLabel: true, 
+                          className: "sm:self-auto",
+                        },
+                      ]}
+                    />
                 </li>
               );
             })}

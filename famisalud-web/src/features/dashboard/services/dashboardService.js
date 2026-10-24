@@ -22,10 +22,9 @@ function shiftDays(date, days) {
 async function loadMemberData(member, windows) {
   const errors = [];
   const [appointmentResult, medicationResult] = await Promise.allSettled([
-    listAppointments(member.id, {
-      from: windows.appointmentsFrom,
-      to: windows.appointmentsTo,
-    }),
+    // El dashboard debe recuperar también citas PROGRAMADA/REPROGRAMADA antiguas
+    // para que se pueda registrar asistencia aunque hayan pasado semanas o meses.
+    listAppointments(member.id),
     listMedications(member.id),
   ]);
 
@@ -80,13 +79,9 @@ export async function loadDashboardData(familyId, referenceDate = new Date()) {
   const members = await listFamilyMembers(familyId);
   const todayStart = startOfLocalDay(referenceDate);
   const weekStart = shiftDays(todayStart, -6);
-  const appointmentFrom = shiftDays(todayStart, -14);
-  const appointmentTo = shiftDays(todayStart, 42);
   const tomorrow = shiftDays(todayStart, 1);
 
   const windows = {
-    appointmentsFrom: appointmentFrom.toISOString(),
-    appointmentsTo: appointmentTo.toISOString(),
     logsFrom: weekStart.toISOString(),
     logsTo: tomorrow.toISOString(),
   };

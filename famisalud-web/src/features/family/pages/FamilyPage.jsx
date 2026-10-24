@@ -1,19 +1,18 @@
 import Select from "../../../shared/components/ui/Select.jsx";
+import PersonAvatar from "../../../shared/components/ui/PersonAvatar.jsx";
+import CardActions from "../../../shared/components/ui/CardActions.jsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ArrowLeftRight,
   Clock3,
   Copy,
-  Eye,
   HeartPulse,
   Mail,
-  Pencil,
   Plus,
   RefreshCw,
   Send,
   ShieldCheck,
-  Trash2,
   UserPlus,
   UsersRound,
   X,
@@ -667,16 +666,18 @@ export default function FamilyPage() {
                           className="surface-card flex min-w-0 flex-col p-4 transition hover:-translate-y-0.5 hover:shadow-md"
                         >
                           <div className="flex items-start gap-3">
-                            <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-100 to-violet-100 text-brand-800 dark:from-brand-950 dark:to-violet-950 dark:text-brand-200">
-                              <span className="text-sm font-extrabold">
-                                {personName(member)
-                                  .split(" ")
-                                  .slice(0, 2)
-                                  .map((part) => part[0])
-                                  .join("")
-                                  .toUpperCase()}
-                              </span>
-                            </span>
+                            <PersonAvatar
+                              person={member}
+                              initials={personName(member)
+                                .split(" ")
+                                .slice(0, 2)
+                                .map((part) => part[0])
+                                .join("")
+                                .toUpperCase()}
+                              alt={`Foto de ${personName(member)}`}
+                              className="size-12 rounded-2xl bg-linear-to-br from-brand-100 to-violet-100 text-sm font-extrabold text-brand-800 dark:from-brand-950 dark:to-violet-950 dark:text-brand-200"
+                              imageClassName="rounded-2xl"
+                            />
                             <div className="min-w-0 flex-1">
                               <h4 className="truncate text-sm font-bold text-slate-900 dark:text-white">
                                 <button
@@ -717,7 +718,7 @@ export default function FamilyPage() {
                               }
                             />
                           </div>
-                          <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                          <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400 mb-2">
                             <p className="flex items-center gap-2">
                               <Mail size={14} className="shrink-0" />
                               {linked
@@ -738,45 +739,31 @@ export default function FamilyPage() {
                               </p>
                             )}
                           </div>
-                          <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                            <button
-                              type="button"
-                              className="secondary-button min-h-9! flex-1 px-3! py-2! text-xs!"
-                              onClick={() =>
-                                setModal({
-                                  mode: "viewMember",
-                                  member,
-                                  isOwn: own,
-                                })
-                              }
-                            >
-                              <Eye size={14} /> Ver detalle
-                            </button>
-                            {canEdit && (
-                              <button
-                                className="secondary-button min-h-9! flex-1 px-3! py-2! text-xs!"
-                                onClick={() =>
-                                  setModal({
-                                    mode: "editMember",
-                                    member,
-                                    isOwn: own,
-                                  })
-                                }
-                              >
-                                <Pencil size={14} /> Editar
-                              </button>
-                            )}
-                            {isAdmin && !own && (
-                              <button
-                                className="icon-button size-9! border border-rose-100 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-950/30"
-                                onClick={() => handleDeleteMember(member)}
-                                title="Retirar perfil de esta familia"
-                                aria-label={`Retirar a ${personName(member)} de esta familia`}
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            )}
-                          </div>
+                          <CardActions
+                            actions={[
+                              {
+                                key: "view",
+                                type: "view",
+                                label: "Ver detalle",
+                                showLabel: true,
+                                onClick: () => setModal({ mode: "viewMember", member, isOwn: own }),
+                              },
+                              {
+                                key: "edit",
+                                type: "edit",
+                                label: "Editar perfil",
+                                onClick: () => setModal({ mode: "editMember", member, isOwn: own }),
+                                visible: canEdit,
+                              },
+                              {
+                                key: "delete",
+                                type: "delete",
+                                label: `Retirar a ${personName(member)} de esta familia`,
+                                onClick: () => handleDeleteMember(member),
+                                visible: isAdmin && !own,
+                              },
+                            ]}
+                          />
                         </article>
                       );
                     })}

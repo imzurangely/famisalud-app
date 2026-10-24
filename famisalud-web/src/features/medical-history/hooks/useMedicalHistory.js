@@ -59,6 +59,19 @@ function linkedUserId(member) {
   return member?.linkedUserId ?? member?.linked_user_id ?? null;
 }
 
+function personIdOf(member) {
+  return member?.personId ?? member?.person_id ?? member?.person?.id ?? member?.person?.personId ?? member?.person?.person_id ?? "";
+}
+
+function preferredMemberId(list, userId, preferredId = "", preferredPersonId = "") {
+  if (preferredId && list.some((member) => String(member.id) === String(preferredId))) return String(preferredId);
+  const byPerson = preferredPersonId && list.find((member) => String(personIdOf(member)) === String(preferredPersonId));
+  if (byPerson) return String(byPerson.id);
+  const own = list.find((member) => String(linkedUserId(member)) === String(userId)) ||
+    list.find((member) => String(member.relationship || "").toUpperCase() === "YO_MISMO");
+  return String(own?.id || list[0]?.id || "");
+}
+
 function cleanError(error) {
   return friendlyErrorMessage(
     error,
@@ -67,7 +80,7 @@ function cleanError(error) {
 }
 
 /** Estado y operaciones del módulo; los servicios únicamente hacen solicitudes HTTP. */
-export function useMedicalHistory() {
+export function useMedicalHistory({ initialMemberId = "", initialPersonId = "" } = {}) {
   const { user } = useAuth();
   const { families, selectedFamily, selectedFamilyId } = useFamilies();
   const [members, setMembers] = useState([]);
@@ -93,17 +106,8 @@ export function useMedicalHistory() {
       const list = await listFamilyMembers(selectedFamilyId);
       setMembers(list);
       setSelectedMemberId((currentId) => {
-        if (list.some((member) => String(member.id) === String(currentId)))
-          return currentId;
-        const ownMember =
-          list.find(
-            (member) => String(linkedUserId(member)) === String(user?.id),
-          ) ||
-          list.find(
-            (member) =>
-              (member.relationship ?? "").toUpperCase() === "YO_MISMO",
-          );
-        return String(ownMember?.id || list[0]?.id || "");
+        if (list.some((member) => String(member.id) === String(currentId))) return currentId;
+        return preferredMemberId(list, user?.id, initialMemberId, initialPersonId);
       });
       return list;
     } catch (requestError) {
@@ -112,7 +116,7 @@ export function useMedicalHistory() {
     } finally {
       setLoadingMembers(false);
     }
-  }, [selectedFamilyId, user?.id]);
+  }, [selectedFamilyId, user?.id, initialMemberId, initialPersonId]);
 
   useEffect(() => {
     let active = true;
@@ -130,15 +134,7 @@ export function useMedicalHistory() {
       .then((list) => {
         if (!active) return;
         setMembers(list);
-        const ownMember =
-          list.find(
-            (member) => String(linkedUserId(member)) === String(user?.id),
-          ) ||
-          list.find(
-            (member) =>
-              (member.relationship ?? "").toUpperCase() === "YO_MISMO",
-          );
-        setSelectedMemberId(String(ownMember?.id || list[0]?.id || ""));
+        setSelectedMemberId(preferredMemberId(list, user?.id, initialMemberId, initialPersonId));
       })
       .catch((requestError) => {
         if (active) setError(cleanError(requestError));
@@ -150,7 +146,7 @@ export function useMedicalHistory() {
     return () => {
       active = false;
     };
-  }, [selectedFamilyId, user?.id]);
+  }, [selectedFamilyId, user?.id, initialMemberId, initialPersonId]);
 
   const selectedMember = useMemo(
     () =>

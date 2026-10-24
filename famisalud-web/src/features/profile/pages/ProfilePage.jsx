@@ -3,9 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   AlertTriangle,
+  Camera,
   Check,
   KeyRound,
   LogOut,
+  Upload,
   Mail,
   MonitorSmartphone,
   Save,
@@ -37,6 +39,7 @@ import {
   revokeSession,
   transferFamilyAdministrator,
   updateOwnProfile,
+  uploadOwnAvatar,
   updateInsurancePlan,
 } from "../services/profileService.js";
 
@@ -170,6 +173,10 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(() => initialProfile(user));
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarInputKey, setAvatarInputKey] = useState(0);
   const [sessions, setSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [sessionBusy, setSessionBusy] = useState(false);
@@ -200,6 +207,16 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => setProfile(initialProfile(user)), [user]);
+
+  useEffect(() => {
+    if (!avatarFile) {
+      setAvatarPreview("");
+      return undefined;
+    }
+    const objectUrl = URL.createObjectURL(avatarFile);
+    setAvatarPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [avatarFile]);
 
   useEffect(() => {
     let active = true;
@@ -343,7 +360,6 @@ export default function ProfilePage() {
         phone: profile.phone.trim() || null,
         sisben: profile.sisben.trim() || null,
         stratum: profile.stratum === "" ? null : Number(profile.stratum),
-        avatarUrl: profile.avatarUrl.trim() || null,
       };
       const response = await updateOwnProfile(payload);
       if (response?.user) updateUser(response.user);
@@ -356,6 +372,27 @@ export default function ProfilePage() {
       notify.error(message);
     } finally {
       setProfileBusy(false);
+    }
+  }
+
+  async function saveAvatar() {
+    if (!avatarFile) {
+      notify.warning("Selecciona una imagen antes de subirla.");
+      return;
+    }
+    setAvatarBusy(true);
+    try {
+      const response = await uploadOwnAvatar(avatarFile);
+      if (response?.user) updateUser(response.user);
+      setAvatarFile(null);
+      setAvatarInputKey((current) => current + 1);
+      notify.success("Tu foto de perfil se actualizó correctamente.");
+    } catch (error) {
+      const message = error?.message || "No fue posible subir la foto de perfil.";
+      setProfileError(message);
+      notify.error(message);
+    } finally {
+      setAvatarBusy(false);
     }
   }
 
@@ -730,18 +767,41 @@ export default function ProfilePage() {
               }
               hint="Debe estar entre 1 y 6."
             />
-            <ProfileField
-              label="URL de foto de perfil (opcional)"
-              type="url"
-              value={profile.avatarUrl}
-              onChange={(event) =>
-                setProfile((current) => ({
-                  ...current,
-                  avatarUrl: event.target.value,
-                }))
-              }
-              placeholder="https://…"
-            />
+            <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white text-brand-700 dark:border-slate-700 dark:bg-slate-950 dark:text-brand-300">
+                  {(avatarPreview || user?.avatarUrl || profile.avatarUrl) ? (
+                    <img src={avatarPreview || user?.avatarUrl || profile.avatarUrl} alt="Vista previa de la foto de perfil" className="size-full object-cover" />
+                  ) : (
+                    <Camera size={28} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100">Foto de perfil</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Selecciona una imagen de tu dispositivo. Se aceptan JPG, PNG o WEBP de hasta 5 MB.</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <label className="secondary-button min-h-9 cursor-pointer px-3 py-2 text-[11px]">
+                      <Camera size={14} /> Elegir imagen
+                      <input key={avatarInputKey} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) {
+                          notify.warning("La foto no puede superar los 5 MB.");
+                          event.target.value = "";
+                          return;
+                        }
+                        setProfileError("");
+                        setAvatarFile(file);
+                      }} />
+                    </label>
+                    <Button type="button" variant="primary" className="min-h-9 px-3 py-2 text-[11px]" loading={avatarBusy} disabled={!avatarFile || avatarBusy} onClick={saveAvatar}>
+                      <Upload size={14} /> {avatarBusy ? "Subiendo…" : "Subir foto"}
+                    </Button>
+                    {avatarFile && <span className="max-w-full truncate text-[10px] text-slate-500">{avatarFile.name}</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           {profileError && (
             <p

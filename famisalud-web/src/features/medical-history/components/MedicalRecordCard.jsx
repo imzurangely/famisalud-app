@@ -1,4 +1,5 @@
 import { CalendarDays, ClipboardList, Pencil, Trash2 } from "lucide-react";
+import CardActions from "../../../shared/components/ui/CardActions.jsx";
 import {
   fieldValue,
   formatDate,
@@ -146,35 +147,17 @@ export default function MedicalRecordCard({
             )}
           </div>
         </div>
-        {canManage && (
-          <div className="flex shrink-0 gap-1">
-            <button
-              type="button"
-              onClick={onEdit}
-              className="icon-button"
-              aria-label="Editar registro"
-              title="Editar"
-            >
-              <Pencil size={15} />
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              disabled={busy}
-              className="icon-button text-rose-500 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40"
-              aria-label="Eliminar registro"
-              title="Eliminar"
-            >
-              <Trash2 size={15} />
-            </button>
-          </div>
-        )}
       </div>
-      <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+      <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 mb-3">
         {details.map(([label, value]) => (
           <Detail key={label} label={label} value={value} />
         ))}
       </dl>
+      {canManage && <CardActions actions={[
+    { key: "edit", type: "edit", label: "Editar registro", icon: Pencil, onClick: onEdit, showLabel: true },
+    { key: "delete", type: "delete", label: "Eliminar registro", icon: Trash2, onClick: onDelete, disabled: busy},
+]} />}
     </article>
   );
 }

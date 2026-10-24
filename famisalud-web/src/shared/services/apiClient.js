@@ -155,3 +155,66 @@ export async function apiFetch(path, options = {}) {
 }
 
 export { API_BASE_URL };
+
+
+/** Same authenticated/retried request flow as apiFetch, but returns a binary file. */
+export async function apiFetchBlob(path, options = {}) {
+  if (typeof path !== 'string' || !path.trim()) {
+    throw new TypeError('apiFetchBlob requiere una ruta relativa no vacía.');
+  }
+
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const url = `${API_BASE_URL}${normalizedPath}`;
+  const { retryOnAuthFailure = true, ...fetchOptions } = options;
+  const headers = new Headers(fetchOptions.headers || {});
+  if (accessToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
+  headers.set('Accept', '*/*');
+
+  let response;
+  try {
+    response = await fetch(url, {
+      ...fetchOptions,
+      headers,
+      credentials: fetchOptions.credentials || 'include',
+    });
+  } catch (error) {
+    throw new ApiError('No fue posible conectar con FamiSalud. Comprueba que la API esté encendida.', {
+      status: 0,
+      data: { cause: error instanceof Error ? error.message : 'Error de red' },
+    });
+  }
+
+  if (response.status === 401 && retryOnAuthFailure && accessToken && !isAuthEndpoint(normalizedPath)) {
+    const refreshedToken = await rotateAccessToken();
+    if (refreshedToken) {
+      try {
+        const retryHeaders = new Headers(fetchOptions.headers || {});
+        retryHeaders.set('Authorization', `Bearer ${refreshedToken}`);
+        retryHeaders.set('Accept', '*/*');
+        response = await fetch(url, {
+          ...fetchOptions,
+          headers: retryHeaders,
+          credentials: fetchOptions.credentials || 'include',
+        });
+      } catch (error) {
+        throw new ApiError('No fue posible conectar con FamiSalud. Comprueba que la API esté encendida.', {
+          status: 0,
+          data: { cause: error instanceof Error ? error.message : 'Error de red' },
+        });
+      }
+    }
+  }
+
+  if (!response.ok) {
+    const data = await parseResponse(response);
+    const rawMessage = data?.message || data?.error || '';
+    throw new ApiError(makeFriendlyMessage(rawMessage, { status: response.status }), {
+      status: response.status,
+      data,
+    });
+  }
+
+  return response.blob();
+}

@@ -65,3 +65,10 @@ export function updateInsurancePlan(memberId, planId, payload) {
 export function deleteInsurancePlan(memberId, planId) {
   return apiFetch(`/members/${memberId}/insurance-plans/${planId}`, { method: 'DELETE' }).then(unwrapApiData);
 }
+
+
+export function uploadOwnAvatar(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiFetch('/auth/profile/avatar', { method: 'POST', body: formData }).then(unwrapApiData);
+}

@@ -5,12 +5,13 @@ import {
   LogOut,
   Menu,
   Moon,
-  Search,
   UserRound,
   X,
   Sun,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import GlobalSearch from "./GlobalSearch.jsx";
+import PersonAvatar from "../ui/PersonAvatar.jsx";
 import { useTheme } from "../../hooks/useTheme.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import { mainNavigation } from "../../../routes/navigation.js";
@@ -24,8 +25,8 @@ import {
 } from "../../../features/notifications/utils/notificationUtils.js";
 
 function getInitials(user) {
-  const first = user?.firstName?.trim()?.[0] || "";
-  const last = user?.lastName?.trim()?.[0] || "";
+  const first = (user?.firstName || user?.first_name || "").trim()[0] || "";
+  const last = (user?.lastName || user?.last_name || "").trim()[0] || "";
   return `${first}${last}`.toUpperCase() || "FS";
 }
 
@@ -105,7 +106,7 @@ export default function Topbar({ onMenuClick }) {
   }
 
   const displayName =
-    [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Mi cuenta";
+    [user?.firstName || user?.first_name, user?.lastName || user?.last_name].filter(Boolean).join(" ") || "Mi cuenta";
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
@@ -123,25 +124,7 @@ export default function Topbar({ onMenuClick }) {
           </h1>
         </div>
 
-        <div className="hidden w-64 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition focus-within:border-brand-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-brand-50 dark:border-slate-800 dark:bg-slate-900 dark:focus-within:border-brand-800 dark:focus-within:bg-slate-900 xl:flex">
-          <Search size={17} className="shrink-0 text-slate-400" />
-          <input
-            aria-label="Buscar"
-            placeholder="Buscar en FamiSalud"
-            className="w-full bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                setToast(
-                  "La búsqueda se conectará a los módulos en una siguiente etapa.",
-                );
-                window.setTimeout(() => setToast(""), 3000);
-              }
-            }}
-          />
-          <kbd className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400 dark:border-slate-700 dark:bg-slate-800">
-            /
-          </kbd>
-        </div>
+        <GlobalSearch />
 
         <div className="relative">
           <button
@@ -294,9 +277,13 @@ export default function Topbar({ onMenuClick }) {
             aria-expanded={openPanel === "profile"}
             aria-label="Abrir menú de usuario"
           >
-            <span className="flex size-10 items-center justify-center rounded-full bg-linear-to-br from-violet-100 to-brand-100 text-sm font-bold text-brand-800 ring-2 ring-white dark:from-violet-950 dark:to-brand-950 dark:text-brand-200 dark:ring-slate-950">
-              {getInitials(user)}
-            </span>
+            <PersonAvatar
+              person={user}
+              initials={getInitials(user)}
+              alt={`Foto de ${displayName}`}
+              className="size-10 rounded-full bg-linear-to-br from-violet-100 to-brand-100 text-sm font-bold text-brand-800 ring-2 ring-white dark:from-violet-950 dark:to-brand-950 dark:text-brand-200 dark:ring-slate-950"
+              imageClassName="rounded-full"
+            />
             <span className="hidden text-left xl:block">
               <span className="block max-w-36 truncate text-xs font-bold text-slate-800 dark:text-slate-100">
                 {displayName}

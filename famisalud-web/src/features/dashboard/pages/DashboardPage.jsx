@@ -714,8 +714,8 @@ export default function DashboardPage() {
             fieldValue(appointment, "startsAt", "starts_at"),
           ).getTime();
           return (
+            Number.isFinite(startsAt) &&
             startsAt <= now &&
-            startsAt >= now - 14 * 86_400_000 &&
             ["PROGRAMADA", "REPROGRAMADA"].includes(
               getAppointmentStatus(appointment),
             )
@@ -943,9 +943,6 @@ export default function DashboardPage() {
         <div className="absolute -bottom-24 right-[25%] size-48 rounded-full border-28 border-white/6" />
         <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold tracking-wide text-white/90">
-              <Sparkles size={13} /> CUIDADO QUE NOS UNE
-            </span>
             <h1 className="mt-4 font-display text-[27px] font-extrabold leading-tight tracking-tight sm:text-[34px]">
               {firstName ? `Hola, ${firstName}.` : "La salud de tu familia,"}
               <br className="hidden sm:block" />{" "}
@@ -1265,7 +1262,7 @@ export default function DashboardPage() {
             to="/citas"
           />
           <div className="space-y-3">
-            {pendingAttendance.slice(0, 3).map((item) => (
+            {pendingAttendance.map((item) => (
               <AppointmentRow
                 key={`attendance-${item.appointment.id}`}
                 item={item}

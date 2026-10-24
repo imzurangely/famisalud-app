@@ -1,11 +1,5 @@
-import {
-  ExternalLink,
-  FileImage,
-  FileText,
-  Pencil,
-  Trash2,
-} from "lucide-react";
-import Button from "../../../shared/components/ui/Button.jsx";
+import { Download, FileImage, FileText, Pencil, Trash2, Eye } from "lucide-react";
+import CardActions from "../../../shared/components/ui/CardActions.jsx";
 import {
   documentCategoryLabel,
   formatDocumentDate,
@@ -18,12 +12,12 @@ export default function DocumentCard({
   canManage,
   onEdit,
   onDelete,
+  onPreview,
+  onDownload,
   isTarget = false,
 }) {
-  const fileUrl = valueOf(document, "fileUrl", "file_url");
   const fileName =
-    valueOf(document, "originalFileName", "original_file_name") ||
-    "Archivo clínico";
+    valueOf(document, "originalFileName", "original_file_name") || "Archivo clínico";
   const mimeType = valueOf(document, "mimeType", "mime_type") || "";
   const Icon = mimeType.startsWith("image/") ? FileImage : FileText;
   return (
@@ -42,51 +36,17 @@ export default function DocumentCard({
       <h3 className="mt-4 wrap-break-words text-sm font-extrabold text-slate-900 dark:text-white">
         {valueOf(document, "title") || fileName}
       </h3>
-      <p className="mt-1 wrap-break-words text-[11px] text-slate-400">
-        {fileName}
-      </p>
-      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500 dark:text-slate-400">
-        <span>
-          {formatDocumentDate(
-            valueOf(document, "documentDate", "document_date"),
-          )}
-        </span>
-        <span>
-          {formatFileSize(valueOf(document, "fileSize", "file_size"))}
-        </span>
+      <p className="mt-1 wrap-break-words text-[11px] text-slate-400">{fileName}</p>
+      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500 dark:text-slate-400 mb-3">
+        <span>{formatDocumentDate(valueOf(document, "documentDate", "document_date"))}</span>
+        <span>{formatFileSize(valueOf(document, "fileSize", "file_size"))}</span>
       </div>
-      <div className="mt-auto flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
-        {fileUrl && (
-          <a
-            href={fileUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="secondary-button min-h-9 px-3 py-2 text-[11px]"
-          >
-            <ExternalLink size={14} /> Abrir archivo
-          </a>
-        )}
-        {canManage && (
-          <>
-            <Button
-              variant="ghost"
-              className="min-h-9 px-3 py-2"
-              onClick={onEdit}
-              aria-label="Editar documento"
-            >
-              <Pencil size={15} />
-            </Button>
-            <Button
-              variant="danger"
-              className="min-h-9 px-3 py-2"
-              onClick={onDelete}
-              aria-label="Eliminar documento"
-            >
-              <Trash2 size={15} />
-            </Button>
-          </>
-        )}
-      </div>
+      <CardActions actions={[
+        { key: "preview", type: "view", label: "Ver detalle", icon: Eye, onClick: onPreview, showLabel: true },
+        { key: "download", type: "download", label: "Descargar", icon: Download, onClick: onDownload, showLabel: true },
+        { key: "edit", type: "edit", label: "Editar documento", icon: Pencil, onClick: onEdit, visible: canManage },
+        { key: "delete", type: "delete", label: "Eliminar documento", icon: Trash2, onClick: onDelete, visible: canManage },
+      ]} />
     </article>
   );
 }

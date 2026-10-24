@@ -1,4 +1,4 @@
-import { apiFetch } from '../../../shared/services/apiClient.js';
+import { apiFetch, apiFetchBlob } from '../../../shared/services/apiClient.js';
 import { readApiList, unwrapApiData } from '../../../shared/utils/apiResponse.js';
 
 const memberDocumentsPath = (memberId) => `/members/${memberId}/documents`;
@@ -35,4 +35,10 @@ export function updateDocument(memberId, documentId, formData) {
 
 export function deleteDocument(memberId, documentId) {
   return apiFetch(`${memberDocumentsPath(memberId)}/${documentId}`, { method: 'DELETE' }).then(unwrapApiData);
+}
+
+
+export function getDocumentFile(memberId, documentId, { download = false } = {}) {
+  const query = download ? '?download=1' : '';
+  return apiFetchBlob(`${memberDocumentsPath(memberId)}/${documentId}/file${query}`);
 }

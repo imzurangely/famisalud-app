@@ -6,7 +6,7 @@ import {
   Trash2,
   UserRound,
 } from "lucide-react";
-import Button from "../../../shared/components/ui/Button.jsx";
+import CardActions from "../../../shared/components/ui/CardActions.jsx";
 import {
   appointmentStatusClass,
   appointmentStatusLabel,
@@ -46,7 +46,7 @@ export default function AppointmentCard({
       <p className="mt-1 text-xs font-semibold text-brand-700 dark:text-brand-300">
         {appointmentTypeLabel(appointment)}
       </p>
-      <div className="mt-4 space-y-2.5 text-xs text-slate-500 dark:text-slate-400">
+      <div className="mt-4 space-y-2.5 text-xs text-slate-500 dark:text-slate-400 mb-3">
         <p className="flex items-start gap-2">
           <CalendarClock size={15} className="mt-0.5 shrink-0" />
           <span>
@@ -72,35 +72,13 @@ export default function AppointmentCard({
           </p>
         )}
       </div>
-      <div className="mt-auto flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-slate-800 sm:gap-2.5">
-        <Button
-          variant="secondary"
-          className="min-h-9 px-3 py-2 text-[11px]"
-          onClick={onOpenDocuments}
-        >
-          <FileText size={14} /> Documentos
-        </Button>
-        {canManage && (
-          <>
-            <Button
-              variant="ghost"
-              className="min-h-9 px-3 py-2"
-              onClick={onEdit}
-              aria-label="Editar cita"
-            >
-              <Pencil size={15} />
-            </Button>
-            <Button
-              variant="danger"
-              className="min-h-9 px-3 py-2"
-              onClick={onDelete}
-              aria-label="Eliminar cita"
-            >
-              <Trash2 size={15} />
-            </Button>
-          </>
-        )}
-      </div>
+      <CardActions
+        actions={[
+          { key: "documents", type: "view", label: "Documentos", icon: FileText, onClick: onOpenDocuments, showLabel: true },
+          { key: "edit", type: "edit", label: "Editar cita", icon: Pencil, onClick: onEdit, visible: canManage },
+          { key: "delete", type: "delete", label: "Eliminar cita", icon: Trash2, onClick: onDelete, visible: canManage },
+        ]}
+      />
       {valueOf(appointment, "status") === "CANCELADA" && (
         <p className="mt-3 text-[10px] text-slate-400">
           Esta cita está cancelada.

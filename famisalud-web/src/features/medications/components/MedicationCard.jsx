@@ -1,4 +1,5 @@
-import { CalendarClock, Check, Clock3, Pill } from "lucide-react";
+import { CalendarClock, Check, Clock3, Eye, Pencil, Pill, Trash2 } from "lucide-react";
+import CardActions from "../../../shared/components/ui/CardActions.jsx";
 import {
   doseLabel,
   fieldValue,
@@ -69,7 +70,7 @@ export default function MedicationCard({
             {MANAGEMENT_STATUSES[managementStatus] || managementStatus}
           </span>
         </div>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400 mb-3">
           <span className="inline-flex items-center gap-1.5">
             <CalendarClock size={13} /> Desde {formatDate(startDate)}
           </span>
@@ -80,24 +81,11 @@ export default function MedicationCard({
           )}
         </div>
       </button>
-      {canManage && (
-        <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded-lg px-3 py-2 text-[11px] font-bold text-brand-700 transition hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/50"
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-lg px-3 py-2 text-[11px] font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/40"
-          >
-            Eliminar
-          </button>
-        </div>
-      )}
+      <CardActions actions={[
+        { key: "view", type: "view", label: "Ver medicamento", icon: Eye, onClick: onSelect, showLabel: true },
+        { key: "edit", type: "edit", label: "Editar medicamento", icon: Pencil, onClick: onEdit, visible: canManage },
+        { key: "delete", type: "delete", label: "Eliminar medicamento", icon: Trash2, onClick: onDelete, visible: canManage },
+      ]} />
     </article>
   );
 }

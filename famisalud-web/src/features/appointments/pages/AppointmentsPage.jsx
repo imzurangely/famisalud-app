@@ -1,5 +1,5 @@
 import Select from "../../../shared/components/ui/Select.jsx";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
   CalendarDays,
@@ -10,6 +10,7 @@ import {
 import { useFamilies } from "../../../shared/hooks/useFamily.js";
 import Button from "../../../shared/components/ui/Button.jsx";
 import EmptyState from "../../../shared/components/ui/EmptyState.jsx";
+import ModuleSearch from "../../../shared/components/ui/ModuleSearch.jsx";
 import { confirmAction, notify } from "../../../shared/utils/feedback.js";
 import AppointmentCard from "../components/AppointmentCard.jsx";
 import AppointmentFormModal from "../components/AppointmentFormModal.jsx";
@@ -82,6 +83,31 @@ export default function AppointmentsPage() {
   } = useAppointments({ initialMemberId, initialPersonId });
   const [modalMode, setModalMode] = useState(null);
   const [currentAppointment, setCurrentAppointment] = useState(null);
+  const [searchDraft, setSearchDraft] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+
+  const filteredAppointments = useMemo(() => {
+    const query = appliedSearch.trim().toLocaleLowerCase("es-CO");
+    if (!query) return appointments;
+    return appointments.filter((appointment) => [
+      appointment.title,
+      appointment.type,
+      appointment.appointmentType,
+      appointment.appointment_type,
+      appointment.specialty,
+      appointment.doctorName,
+      appointment.doctor_name,
+      appointment.location,
+      appointment.reason,
+      appointment.notes,
+      appointment.status,
+    ].filter(Boolean).join(" ").toLocaleLowerCase("es-CO").includes(query));
+  }, [appointments, appliedSearch]);
+
+  function clearSearch() {
+    setSearchDraft("");
+    setAppliedSearch("");
+  }
 
   useEffect(() => {
     if (loadingAppointments || !targetAppointmentId) return;
@@ -257,7 +283,7 @@ export default function AppointmentsPage() {
         </div>
       </header> */}
 
-      <section className="surface-card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 sm:p-5 items-center">
+      <section className="surface-card grid gap-4 p-4 sm:grid-cols-2 sm:p-5 items-center">
         <label className="block">
           <span className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
             Familia o espacio
@@ -291,26 +317,35 @@ export default function AppointmentsPage() {
           </Select>
         </label>
 
-        <label className="block sm:col-span-2 lg:col-span-1">
-          <span className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
-            Filtrar estado
-          </span>
-          <Select
-            className="form-input w-full py-2"
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-          >
-            <option value="">Todos los estados</option>
-            {APPOINTMENT_STATUSES.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </Select>
-        </label>
+
       </section>
 
       <InlineError message={error} onClose={clearError} />
+
+      <section className="surface-card grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.45fr)] sm:p-5">
+        <ModuleSearch
+          id="appointments-search"
+          value={searchDraft}
+          onChange={(event) => {
+            setSearchDraft(event.target.value);
+            setAppliedSearch(event.target.value);
+          }}
+          onClear={clearSearch}
+          placeholder="Buscar por título, profesional o lugar…"
+          ariaLabel="Buscar citas médicas"
+        />
+        <Select
+          ariaLabel="Filtrar citas por estado"
+          className="form-input"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+        >
+          <option value="">Todos los estados</option>
+          {APPOINTMENT_STATUSES.map((item) => (
+            <option key={item.value} value={item.value}>{item.label}</option>
+          ))}
+        </Select>
+      </section>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -358,9 +393,16 @@ export default function AppointmentsPage() {
             ) : null
           }
         />
+      ) : filteredAppointments.length === 0 ? (
+        <EmptyState
+          icon={CalendarDays}
+          title="No encontramos citas"
+          description="Prueba con otro término de búsqueda o limpia el buscador."
+          action={<Button variant="secondary" onClick={clearSearch}>Limpiar búsqueda</Button>}
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {appointments.map((appointment) => (
+          {filteredAppointments.map((appointment) => (
             <AppointmentCard
               key={appointment.id}
               appointment={appointment}
