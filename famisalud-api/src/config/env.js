@@ -6,6 +6,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   API_PREFIX: z.string().default('/api'),
   DATABASE_URL: z.string().min(1),
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(10).default(process.env.VERCEL ? 1 : 10),
   DATABASE_SSL: z
     .string()
     .default('false')
@@ -27,7 +28,8 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32).default('dev-only-change-me-famisalud-2026-secret'),
   ACCESS_TOKEN_MINUTES: z.coerce.number().int().positive().default(15),
   REFRESH_TOKEN_DAYS: z.coerce.number().int().positive().default(30),
-  REFRESH_COOKIE_NAME: z.string().min(1).default('refresh_token')
+  REFRESH_COOKIE_NAME: z.string().min(1).default('refresh_token'),
+  CRON_SECRET: z.string().min(32).optional()
 });
 
 const result = envSchema.safeParse(process.env);

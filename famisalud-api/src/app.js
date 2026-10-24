@@ -17,6 +17,7 @@ import documentRoutes from './modules/documents/document.routes.js';
 import notificationRoutes from './modules/notifications/notification.routes.js';
 import deviceRoutes from './modules/devices/device.routes.js';
 import reminderRoutes from './modules/reminders/reminder.routes.js';
+import internalCronRoutes from './modules/internal-cron/cron.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFound } from './middlewares/notFound.js';
 
@@ -57,6 +58,10 @@ app.use(env.API_PREFIX, documentRoutes);
 app.use(env.API_PREFIX, notificationRoutes);
 app.use(env.API_PREFIX, deviceRoutes);
 app.use(env.API_PREFIX, reminderRoutes);
+app.use(env.API_PREFIX, internalCronRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
+
+// Vercel importa la aplicación sin arrancar el servidor ni los cron persistentes.
+export default app;
