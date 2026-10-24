@@ -43,33 +43,20 @@ Construir una experiencia sencilla y responsable para acompañar el cuidado coti
 - Nodemailer para recuperación de contraseña e invitaciones.
 - `node-cron` para tareas programadas en un proceso persistente/local.
 
-### Infraestructura prevista
-
-- Netlify para el frontend estático.
-- Vercel para la API HTTP, con un programador externo para los recordatorios frecuentes si se utiliza el plan Hobby. `api/index.js` es la entrada serverless; `api/src/index.js` conserva el servidor local y `node-cron`.
-- Supabase para PostgreSQL.
-
-> El despliegue propuesto es una configuración de portafolio. Las cargas de archivos de más de 4,5 MB y los recordatorios que requieren precisión deben validarse con especial cuidado antes de considerar el servicio apto para uso real.
-
 ## Estructura del monorepo
 
 ```text
-FamiSalud/
-├── api/
-│   ├── database/
-│   │   ├── migrations/
-│   │   └── seeds/
-│   ├── scripts/
+famisalud.app/
+├── famisalud-api/
 │   ├── src/
 │   │   ├── config/
 │   │   ├── middlewares/
 │   │   ├── modules/
 │   │   └── shared/
-│   ├── tests/
 │   ├── index.js
 │   ├── package.json
 │   └── vercel.json
-├── front/
+├── famisalud-web/
 │   ├── src/
 │   │   ├── features/
 │   │   ├── routes/
@@ -77,81 +64,8 @@ FamiSalud/
 │   ├── package.json
 │   └── vite.config.js
 ├── netlify.toml
-├── DEPLOYMENT.md
 └── README.md
 ```
-
-## Ejecutar en local
-
-Requisitos: Node.js 24.x y npm 11 o superior, PostgreSQL y credenciales de los servicios externos que quieras probar.
-
-### 1. Configurar la base de datos
-
-Crea una base de datos PostgreSQL local y ejecuta los archivos SQL de `api/database/migrations/` **en orden numérico** sobre una base vacía. No ejecutes los seeds de demostración en una base con información real.
-
-### 2. Iniciar la API
-
-```bash
-cd api
-npm ci
-```
-
-Copia `.env.example` como `.env` y completa las variables necesarias. Después:
-
-```bash
-npm run dev
-```
-
-La API local usa `http://localhost:3000` y el endpoint de salud es `http://localhost:3000/health`.
-
-### 3. Iniciar el frontend
-
-En otra terminal:
-
-```bash
-cd front
-npm ci
-```
-
-Crea `front/.env` con la URL de tu API local:
-
-```dotenv
-VITE_API_BASE_URL=http://localhost:3000/api
-```
-
-Luego ejecuta:
-
-```bash
-npm run dev
-```
-
-Vite mostrará la dirección local, normalmente `http://localhost:5173`.
-
-## Variables de entorno importantes
-
-- API: `DATABASE_URL`, `DATABASE_SSL`, `FRONTEND_URL`, `JWT_SECRET`, `ENABLE_DEV_AUTH`, credenciales `CLOUDINARY_*`, credenciales `SMTP_*` y `CRON_SECRET` para tareas programadas.
-- Frontend: `VITE_API_BASE_URL`, que debe incluir el prefijo `/api`.
-
-Nunca subas `.env`, credenciales de Supabase, secretos JWT, credenciales SMTP ni el secreto de cron al repositorio. El archivo `.env.example` debe contener únicamente ejemplos sin secretos reales.
-
-## Despliegue
-
-Consulta [`DEPLOYMENT.md`](./DEPLOYMENT.md) para configurar Supabase, Vercel y Netlify, proteger los endpoints de cron y entender las limitaciones del plan gratuito.
-
-## Verificación antes de publicar
-
-En el frontend (`front/`), ejecuta los scripts disponibles:
-
-```bash
-cd front
-npm ci
-npm run lint
-npm run build
-```
-
-En la API (`api/`), inicia el servicio con `npm run dev` y valida sus rutas mediante las peticiones de `api/tests/`. También puedes comprobar la sintaxis de los archivos modificados con `node --check ruta/al/archivo.js`. La API no declara actualmente scripts `lint` ni `build` en su `package.json`.
-
-El frontend genera `front/dist/`. El build y las pruebas locales no sustituyen las pruebas de extremo a extremo contra una base de datos desplegada.
 
 ## Seguridad y alcance
 
