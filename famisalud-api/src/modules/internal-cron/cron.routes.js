@@ -16,8 +16,11 @@ function authorizeCron(req, res, next) {
     });
   }
 
-  const received = Buffer.from(req.get('authorization') || '', 'utf8');
+  const authHeader = req.get('authorization') || '';
+  const received = Buffer.from(authHeader, 'utf8');
   const expected = Buffer.from(`Bearer ${secret}`, 'utf8');
+
+  // Validamos longitud y seguridad para evitar ataques de tiempo
   if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
     return res.status(401).json({ success: false, message: 'No autorizado.' });
   }
