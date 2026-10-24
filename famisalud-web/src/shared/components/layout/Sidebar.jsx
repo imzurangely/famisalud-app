@@ -1,10 +1,5 @@
-import {
-  ChevronDown,
-  HeartPulse,
-  Plus,
-  UsersRound,
-  X,
-} from "lucide-react";
+import Select from "../ui/Select.jsx";
+import { HeartPulse, Plus, UsersRound, X } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import { useFamilies } from "../../hooks/useFamily.js";
 import { notify } from "../../utils/feedback.js";
@@ -13,18 +8,9 @@ import { APP_NAME } from "../../constants/app.js";
 import { useNotificationsSummary } from "../../../features/notifications/context/NotificationsContext.jsx";
 
 export default function Sidebar({ open, onClose }) {
-  const {
-    families,
-    selectedFamily,
-    selectedFamilyId,
-    selectFamily,
-    loadingFamilies,
-  } = useFamilies();
+  const { families, selectedFamilyId, selectFamily, loadingFamilies } =
+    useFamilies();
   const { unreadCount } = useNotificationsSummary();
-  const familyRole = selectedFamily?.role
-    ? `Rol: ${selectedFamily.role}`
-    : "Gestiona tus espacios";
-
   function handleSelectFamily(event) {
     const family = families.find(
       (item) => String(item.id) === String(event.target.value),
@@ -72,44 +58,38 @@ export default function Sidebar({ open, onClose }) {
 
         <div className="px-4 pt-5">
           {families.length > 0 ? (
-            <div className="relative">
-              <div className="flex min-h-16.5 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 transition hover:border-brand-200 hover:bg-brand-50/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-900 dark:hover:bg-slate-900">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-brand-100 to-violet-100 text-brand-700 dark:from-brand-950 dark:to-violet-950 dark:text-brand-200">
-                  <UsersRound size={19} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {selectedFamily?.name || "Seleccionar familia"}
-                  </span>
-                  <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">
-                    {selectedFamily ? familyRole : "Gestiona tus espacios"}
-                  </span>
-                </span>
-                <ChevronDown
-                  size={16}
-                  className="shrink-0 text-slate-400"
-                  aria-hidden="true"
-                />
-              </div>
-              <select
-                aria-label="Cambiar familia o espacio"
-                title="Cambiar familia o espacio"
+            <div className="space-y-2">
+              <Select
+                ariaLabel="Cambiar familia o espacio"
                 value={selectedFamilyId ? String(selectedFamilyId) : ""}
                 onChange={handleSelectFamily}
-                className="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none rounded-2xl opacity-0"
-              >
-                {families.map((family) => {
+                disabled={loadingFamilies}
+                options={families.map((family) => {
                   const personal = Boolean(
                     family.is_personal ?? family.isPersonal,
                   );
-                  return (
-                    <option key={family.id} value={String(family.id)}>
-                      {family.name} ·{" "}
-                      {personal ? "Espacio personal" : family.role || "Miembro"}
-                    </option>
-                  );
+                  return {
+                    value: String(family.id),
+                    label: family.name,
+                    description: personal
+                      ? "Espacio personal"
+                      : `Rol: ${family.role || "Miembro"}`,
+                  };
                 })}
-              </select>
+                startAdornment={
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-brand-100 to-violet-100 text-brand-700 dark:from-brand-950 dark:to-violet-950 dark:text-brand-200">
+                    <UsersRound size={19} />
+                  </span>
+                }
+                buttonClassName="min-h-[66px] rounded-2xl border-slate-200 bg-slate-50 px-3 py-3 shadow-none hover:bg-brand-50/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-900"
+              />
+              <Link
+                to="/familia"
+                onClick={onClose}
+                className="flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-brand-700 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-brand-300"
+              >
+                <Plus size={13} /> Gestionar familias
+              </Link>
             </div>
           ) : (
             <Link
@@ -121,15 +101,6 @@ export default function Sidebar({ open, onClose }) {
                 <Plus size={18} />
               </span>
               {loadingFamilies ? "Cargando espacios…" : "Crear familia"}
-            </Link>
-          )}
-          {families.length > 0 && (
-            <Link
-              to="/familia"
-              onClick={onClose}
-              className="mt-2 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-brand-700 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-brand-300"
-            >
-              <Plus size={13} /> Gestionar familias
             </Link>
           )}
         </div>
@@ -157,9 +128,12 @@ export default function Sidebar({ open, onClose }) {
                       <Icon size={18} strokeWidth={1.9} />
                     </span>
                     <span className="min-w-0 flex-1">{label}</span>
-                    {to === '/notificaciones' && unreadCount > 0 && (
-                      <span aria-label={`${unreadCount} notificaciones sin leer`} className="min-w-5 rounded-full bg-violet-100 px-1.5 py-0.5 text-center text-[10px] font-bold text-violet-700 dark:bg-violet-950 dark:text-violet-300">
-                        {unreadCount > 99 ? '99+' : unreadCount}
+                    {to === "/notificaciones" && unreadCount > 0 && (
+                      <span
+                        aria-label={`${unreadCount} notificaciones sin leer`}
+                        className="min-w-5 rounded-full bg-violet-100 px-1.5 py-0.5 text-center text-[10px] font-bold text-violet-700 dark:bg-violet-950 dark:text-violet-300"
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
                       </span>
                     )}
                   </>

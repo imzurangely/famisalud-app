@@ -1,3 +1,4 @@
+import Select from "../../../shared/components/ui/Select.jsx";
 import { useMemo, useState } from "react";
 import {
   Activity,
@@ -57,6 +58,7 @@ export default function MedicalHistoryPage() {
       HISTORY_SECTIONS[0],
     [section],
   );
+  const ActiveIcon = currentSection.icon;
 
   function openCreate() {
     setModalMode("create");
@@ -178,7 +180,7 @@ export default function MedicalHistoryPage() {
           <span className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
             Perfil clínico
           </span>
-          <select
+          <Select
             className="form-input"
             value={selectedMemberId}
             onChange={(event) => setSelectedMemberId(event.target.value)}
@@ -195,7 +197,7 @@ export default function MedicalHistoryPage() {
                   : ""}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </section>
 

@@ -1,19 +1,28 @@
-import { useCallback } from 'react';
+import { useCallback } from "react";
 import {
   requestPasswordReset,
   resetPasswordRequest,
   verifyPasswordResetCode,
-} from '../services/passwordRecoveryService.js';
-import { useActionState } from './useActionState.js';
+} from "../services/passwordRecoveryService.js";
+import { useActionState } from "./useActionState.js";
 
 export function usePasswordRecovery() {
   const requestAction = useActionState(requestPasswordReset);
   const verifyAction = useActionState(verifyPasswordResetCode);
   const resetAction = useActionState(resetPasswordRequest);
 
-  const requestCode = useCallback((email) => requestAction.execute(email), [requestAction.execute]);
-  const verifyCode = useCallback((payload) => verifyAction.execute(payload), [verifyAction.execute]);
-  const resetPassword = useCallback((payload) => resetAction.execute(payload), [resetAction.execute]);
+  const requestCode = useCallback(
+    (email) => requestAction.execute(email),
+    [requestAction.execute],
+  );
+  const verifyCode = useCallback(
+    (payload) => verifyAction.execute(payload),
+    [verifyAction.execute],
+  );
+  const resetPassword = useCallback(
+    (payload) => resetAction.execute(payload),
+    [resetAction.execute],
+  );
 
   return {
     requestCode,

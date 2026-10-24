@@ -43,7 +43,7 @@ export default function AppRoutes() {
           <Route path="medicamentos" element={<MedicationsPage />} />
           <Route path="notificaciones" element={<NotificationsPage />} />
           <Route path="perfil" element={<ProfilePage />} />
-          <Route path="preferencias" element={<PreferencesPage />} />
+          {/* <Route path="preferencias" element={<PreferencesPage />} /> */}
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

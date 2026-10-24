@@ -30,7 +30,7 @@ export default function MedicationCard({
       <button
         type="button"
         onClick={onSelect}
-        className="w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+        className="w-full text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
       >
         <div className="flex items-start gap-3">
           <span

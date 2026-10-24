@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Gestiona el contador de un minuto sin mezclar temporizadores con peticiones HTTP. */
 export function useResendCodeCooldown(initialSeconds = 60) {
@@ -14,8 +14,13 @@ export function useResendCodeCooldown(initialSeconds = 60) {
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
-      const remaining = Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
-      setSecondsRemaining((current) => current === remaining ? current : remaining);
+      const remaining = Math.max(
+        0,
+        Math.ceil((deadlineRef.current - Date.now()) / 1000),
+      );
+      setSecondsRemaining((current) =>
+        current === remaining ? current : remaining,
+      );
     }, 250);
 
     return () => window.clearInterval(timerId);

@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { clearAccessToken, setAccessToken } from '../../../shared/services/apiClient.js';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  clearAccessToken,
+  setAccessToken,
+} from "../../../shared/services/apiClient.js";
 import {
   getCurrentUserRequest,
   loginRequest,
   logoutRequest,
   refreshSessionRequest,
   registerRequest,
-} from '../services/authService.js';
+} from "../services/authService.js";
 
 let sessionRestorationPromise = null;
 
@@ -15,7 +18,7 @@ async function restoreSession() {
     sessionRestorationPromise = (async () => {
       const refreshResponse = await refreshSessionRequest();
       const token = refreshResponse?.accessToken;
-      if (!token) throw new Error('La API no devolvió un access token.');
+      if (!token) throw new Error("La API no devolvió un access token.");
       setAccessToken(token);
       const sessionResponse = await getCurrentUserRequest();
       return {
@@ -29,9 +32,8 @@ async function restoreSession() {
   return sessionRestorationPromise;
 }
 
-/** Estado y operaciones de autenticación. Los componentes solo usan las acciones expuestas. */
 export function useAuthController() {
-  const [status, setStatus] = useState('loading');
+  const [status, setStatus] = useState("loading");
   const [user, setUser] = useState(null);
   const [familySetupRequired, setFamilySetupRequired] = useState(false);
 
@@ -39,21 +41,25 @@ export function useAuthController() {
     clearAccessToken();
     setUser(null);
     setFamilySetupRequired(false);
-    setStatus('ready');
+    setStatus("ready");
   }, []);
 
   const applyAuthPayload = useCallback((payload) => {
     setAccessToken(payload?.accessToken);
     setUser(payload?.user ?? null);
     setFamilySetupRequired(Boolean(payload?.familySetupRequired));
-    setStatus('ready');
+    setStatus("ready");
     return payload;
   }, []);
 
   useEffect(() => {
     const handleSessionExpired = () => clearAuth();
-    window.addEventListener('famisalud:session-expired', handleSessionExpired);
-    return () => window.removeEventListener('famisalud:session-expired', handleSessionExpired);
+    window.addEventListener("famisalud:session-expired", handleSessionExpired);
+    return () =>
+      window.removeEventListener(
+        "famisalud:session-expired",
+        handleSessionExpired,
+      );
   }, [clearAuth]);
 
   useEffect(() => {
@@ -71,20 +77,28 @@ export function useAuthController() {
         setFamilySetupRequired(false);
       })
       .finally(() => {
-        if (active) setStatus('ready');
+        if (active) setStatus("ready");
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const login = useCallback(async (credentials) => {
-    const payload = await loginRequest(credentials);
-    return applyAuthPayload(payload);
-  }, [applyAuthPayload]);
+  const login = useCallback(
+    async (credentials) => {
+      const payload = await loginRequest(credentials);
+      return applyAuthPayload(payload);
+    },
+    [applyAuthPayload],
+  );
 
-  const register = useCallback(async (formData) => {
-    const payload = await registerRequest(formData);
-    return applyAuthPayload(payload);
-  }, [applyAuthPayload]);
+  const register = useCallback(
+    async (formData) => {
+      const payload = await registerRequest(formData);
+      return applyAuthPayload(payload);
+    },
+    [applyAuthPayload],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -94,21 +108,39 @@ export function useAuthController() {
     }
   }, [clearAuth]);
 
-  const markFamilySetupComplete = useCallback(() => setFamilySetupRequired(false), []);
+  const markFamilySetupComplete = useCallback(
+    () => setFamilySetupRequired(false),
+    [],
+  );
   const updateUser = useCallback((nextUser) => {
-    setUser((current) => current ? { ...current, ...(nextUser || {}) } : (nextUser || null));
+    setUser((current) =>
+      current ? { ...current, ...(nextUser || {}) } : nextUser || null,
+    );
   }, []);
 
-  return useMemo(() => ({
-    status,
-    user,
-    isAuthenticated: Boolean(user),
-    familySetupRequired,
-    login,
-    register,
-    logout,
-    clearAuth,
-    markFamilySetupComplete,
-    updateUser,
-  }), [status, user, familySetupRequired, login, register, logout, clearAuth, markFamilySetupComplete, updateUser]);
+  return useMemo(
+    () => ({
+      status,
+      user,
+      isAuthenticated: Boolean(user),
+      familySetupRequired,
+      login,
+      register,
+      logout,
+      clearAuth,
+      markFamilySetupComplete,
+      updateUser,
+    }),
+    [
+      status,
+      user,
+      familySetupRequired,
+      login,
+      register,
+      logout,
+      clearAuth,
+      markFamilySetupComplete,
+      updateUser,
+    ],
+  );
 }

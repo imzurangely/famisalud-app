@@ -1,8 +1,8 @@
+import Select from "../../../shared/components/ui/Select.jsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ArrowLeftRight,
-  ChevronDown,
   Clock3,
   Copy,
   Eye,
@@ -43,9 +43,9 @@ import MemberFormModal from "../components/MemberFormModal.jsx";
 
 export default function FamilyPage() {
   const [searchParams] = useSearchParams();
-  const targetFamilyId = searchParams.get('familyId') || '';
-  const targetInvitationId = searchParams.get('invitationId') || '';
-  const requestedTab = searchParams.get('tab') || '';
+  const targetFamilyId = searchParams.get("familyId") || "";
+  const targetInvitationId = searchParams.get("invitationId") || "";
+  const requestedTab = searchParams.get("tab") || "";
   const { user } = useAuth();
   const {
     families,
@@ -129,20 +129,31 @@ export default function FamilyPage() {
   }, [selectedFamilyId, clearError]);
 
   useEffect(() => {
-    if (targetFamilyId && families.some((family) => String(family.id) === String(targetFamilyId)) && String(selectedFamilyId) !== String(targetFamilyId)) {
+    if (
+      targetFamilyId &&
+      families.some((family) => String(family.id) === String(targetFamilyId)) &&
+      String(selectedFamilyId) !== String(targetFamilyId)
+    ) {
       selectFamily(targetFamilyId);
     }
   }, [targetFamilyId, families, selectedFamilyId, selectFamily]);
 
   useEffect(() => {
-    if (requestedTab === 'sent' || requestedTab === 'received') setTab(requestedTab);
+    if (requestedTab === "sent" || requestedTab === "received")
+      setTab(requestedTab);
   }, [requestedTab, targetInvitationId, selectedFamilyId]);
 
   useEffect(() => {
     if (!targetInvitationId || loadingPanel) return;
     const element = document.getElementById(`invitation-${targetInvitationId}`);
-    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [targetInvitationId, loadingPanel, sentInvitations, receivedInvitations, tab]);
+    element?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [
+    targetInvitationId,
+    loadingPanel,
+    sentInvitations,
+    receivedInvitations,
+    tab,
+  ]);
 
   const handleCreateFamily = useCallback(
     async (event) => {
@@ -543,31 +554,27 @@ export default function FamilyPage() {
             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
               <label className="block text-xs font-bold text-slate-600 dark:text-slate-300">
                 Familia o espacio seleccionado
-                <span className="relative mt-2 block">
-                  <select
-                    className="form-input appearance-none pr-10"
-                    value={selectedFamily?.id || ""}
-                    onChange={(event) => {
-                      selectFamily(event.target.value);
-                      setTab("members");
-                      setNotice(null);
-                    }}
-                  >
-                    <option value="" disabled>
-                      Selecciona una familia
+                <Select
+                  ariaLabel="Familia o espacio seleccionado"
+                  className="mt-2"
+                  value={selectedFamily?.id || ""}
+                  placeholder="Selecciona una familia"
+                  onChange={(event) => {
+                    selectFamily(event.target.value);
+                    setTab("members");
+                    setNotice(null);
+                  }}
+                >
+                  <option value="" disabled>
+                    Selecciona una familia
+                  </option>
+                  {families.map((family) => (
+                    <option key={family.id} value={family.id}>
+                      {family.name}
+                      {family.is_personal ? " · Personal" : ""}
                     </option>
-                    {families.map((family) => (
-                      <option key={family.id} value={family.id}>
-                        {family.name}
-                        {family.is_personal ? " · Personal" : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                </span>
+                  ))}
+                </Select>
               </label>
               <div className="flex flex-wrap items-center gap-2">
                 <span
@@ -834,7 +841,7 @@ export default function FamilyPage() {
                       <article
                         id={`invitation-${invitation.id}`}
                         key={invitation.id}
-                        className={`surface-card flex flex-col gap-3 p-4 transition sm:flex-row sm:items-center sm:justify-between ${String(invitation.id) === String(targetInvitationId) ? 'ring-2 ring-brand-400' : ''}`}
+                        className={`surface-card flex flex-col gap-3 p-4 transition sm:flex-row sm:items-center sm:justify-between ${String(invitation.id) === String(targetInvitationId) ? "ring-2 ring-brand-400" : ""}`}
                       >
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -906,7 +913,7 @@ export default function FamilyPage() {
                       <article
                         id={`invitation-${invitation.id}`}
                         key={invitation.id}
-                        className={`surface-card flex flex-col gap-3 p-4 transition sm:flex-row sm:items-center sm:justify-between ${String(invitation.id) === String(targetInvitationId) ? 'ring-2 ring-brand-400' : ''}`}
+                        className={`surface-card flex flex-col gap-3 p-4 transition sm:flex-row sm:items-center sm:justify-between ${String(invitation.id) === String(targetInvitationId) ? "ring-2 ring-brand-400" : ""}`}
                       >
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">

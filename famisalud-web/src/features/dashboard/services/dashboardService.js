@@ -1,12 +1,12 @@
-import { listAppointments } from '../../appointments/services/appointmentsService.js';
-import { listFamilyMembers } from '../../family/services/familyMemberService.js';
+import { listAppointments } from "../../appointments/services/appointmentsService.js";
+import { listFamilyMembers } from "../../family/services/familyMemberService.js";
 import {
   getMedicationProcessSummary,
   listMedicationLogs,
   listMedications,
   listSchedules,
-} from '../../medications/services/medicationsService.js';
-import { listNotifications } from '../../notifications/services/notificationsService.js';
+} from "../../medications/services/medicationsService.js";
+import { listNotifications } from "../../notifications/services/notificationsService.js";
 
 function startOfLocalDay(date) {
   const result = new Date(date);
@@ -23,37 +23,53 @@ function shiftDays(date, days) {
 async function loadMemberData(member, windows) {
   const errors = [];
   const [appointmentResult, medicationResult] = await Promise.allSettled([
-    listAppointments(member.id, { from: windows.appointmentsFrom, to: windows.appointmentsTo }),
+    listAppointments(member.id, {
+      from: windows.appointmentsFrom,
+      to: windows.appointmentsTo,
+    }),
     listMedications(member.id),
   ]);
 
-  const appointments = appointmentResult.status === 'fulfilled' ? appointmentResult.value : [];
-  const medications = medicationResult.status === 'fulfilled' ? medicationResult.value : [];
+  const appointments =
+    appointmentResult.status === "fulfilled" ? appointmentResult.value : [];
+  const medications =
+    medicationResult.status === "fulfilled" ? medicationResult.value : [];
 
-  if (appointmentResult.status === 'rejected') errors.push('No se pudieron cargar algunas citas.');
-  if (medicationResult.status === 'rejected') errors.push('No se pudieron cargar algunos medicamentos.');
+  if (appointmentResult.status === "rejected")
+    errors.push("No se pudieron cargar algunas citas.");
+  if (medicationResult.status === "rejected")
+    errors.push("No se pudieron cargar algunos medicamentos.");
 
-  const medicationDetails = await Promise.all(medications.map(async (medication) => {
-    const [scheduleResult, logsResult, processResult] = await Promise.allSettled([
-      listSchedules(member.id, medication.id),
-      listMedicationLogs(member.id, medication.id, 100, {
-        from: windows.logsFrom,
-        to: windows.logsTo,
-      }),
-      getMedicationProcessSummary(member.id, medication.id),
-    ]);
+  const medicationDetails = await Promise.all(
+    medications.map(async (medication) => {
+      const [scheduleResult, logsResult, processResult] =
+        await Promise.allSettled([
+          listSchedules(member.id, medication.id),
+          listMedicationLogs(member.id, medication.id, 100, {
+            from: windows.logsFrom,
+            to: windows.logsTo,
+          }),
+          getMedicationProcessSummary(member.id, medication.id),
+        ]);
 
-    if (scheduleResult.status === 'rejected' || logsResult.status === 'rejected' || processResult.status === 'rejected') {
-      errors.push('No se pudo cargar parte del seguimiento de medicamentos.');
-    }
+      if (
+        scheduleResult.status === "rejected" ||
+        logsResult.status === "rejected" ||
+        processResult.status === "rejected"
+      ) {
+        errors.push("No se pudo cargar parte del seguimiento de medicamentos.");
+      }
 
-    return {
-      medication,
-      schedules: scheduleResult.status === 'fulfilled' ? scheduleResult.value : [],
-      logs: logsResult.status === 'fulfilled' ? logsResult.value : [],
-      processSummary: processResult.status === 'fulfilled' ? processResult.value : null,
-    };
-  }));
+      return {
+        medication,
+        schedules:
+          scheduleResult.status === "fulfilled" ? scheduleResult.value : [],
+        logs: logsResult.status === "fulfilled" ? logsResult.value : [],
+        processSummary:
+          processResult.status === "fulfilled" ? processResult.value : null,
+      };
+    }),
+  );
 
   return { member, appointments, medications: medicationDetails, errors };
 }
@@ -78,11 +94,14 @@ export async function loadDashboardData(familyId, referenceDate = new Date()) {
 
   const [memberResults, noticesResult] = await Promise.all([
     Promise.all(members.map((member) => loadMemberData(member, windows))),
-    listNotifications({ limit: 5 }).then((result) => result.items).catch(() => null),
+    listNotifications({ limit: 5 })
+      .then((result) => result.items)
+      .catch(() => null),
   ]);
 
   const errors = memberResults.flatMap((item) => item.errors);
-  if (noticesResult === null) errors.push('No se pudieron cargar los avisos recientes.');
+  if (noticesResult === null)
+    errors.push("No se pudieron cargar los avisos recientes.");
 
   return {
     members: memberResults,

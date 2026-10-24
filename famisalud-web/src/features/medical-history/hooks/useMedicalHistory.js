@@ -60,7 +60,10 @@ function linkedUserId(member) {
 }
 
 function cleanError(error) {
-  return friendlyErrorMessage(error, "Ocurrió un problema al guardar la información. Inténtalo de nuevo.");
+  return friendlyErrorMessage(
+    error,
+    "Ocurrió un problema al guardar la información. Inténtalo de nuevo.",
+  );
 }
 
 /** Estado y operaciones del módulo; los servicios únicamente hacen solicitudes HTTP. */

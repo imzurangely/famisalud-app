@@ -1,10 +1,4 @@
-import {
-  HeartPulse,
-  Moon,
-  Sun,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { HeartPulse, Moon, Sun, ShieldCheck, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTheme } from "../../../shared/hooks/useTheme.js";
 

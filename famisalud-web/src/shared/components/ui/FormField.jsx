@@ -1,28 +1,33 @@
+import Select from "./Select.jsx";
 /** Campo de texto reutilizable para formularios de cualquier feature. */
 export function TextField({
   label,
   id,
   value,
   onChange,
-  type = 'text',
+  type = "text",
   required = false,
-  placeholder = '',
+  placeholder = "",
   maxLength,
   min,
   max,
   hint,
   autoComplete,
   disabled = false,
-  className = '',
+  className = "",
 }) {
   return (
-    <label htmlFor={id} className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
-      {label}{required && <span className="ml-1 text-rose-500">*</span>}
+    <label
+      htmlFor={id}
+      className="block text-xs font-semibold text-slate-600 dark:text-slate-300"
+    >
+      {label}
+      {required && <span className="ml-1 text-rose-500">*</span>}
       <input
         id={id}
         className={`form-input mt-2 ${className}`.trim()}
         type={type}
-        value={value ?? ''}
+        value={value ?? ""}
         onChange={onChange}
         required={required}
         placeholder={placeholder}
@@ -32,7 +37,11 @@ export function TextField({
         autoComplete={autoComplete}
         disabled={disabled}
       />
-      {hint && <span className="mt-1.5 block text-[11px] font-normal leading-relaxed text-slate-400">{hint}</span>}
+      {hint && (
+        <span className="mt-1.5 block text-[11px] font-normal leading-relaxed text-slate-400">
+          {hint}
+        </span>
+      )}
     </label>
   );
 }
@@ -46,21 +55,29 @@ export function SelectField({
   options,
   disabled = false,
   required = false,
-  className = '',
+  className = "",
 }) {
   return (
-    <label htmlFor={id} className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
-      {label}{required && <span className="ml-1 text-rose-500">*</span>}
-      <select
+    <label
+      htmlFor={id}
+      className="block text-xs font-semibold text-slate-600 dark:text-slate-300"
+    >
+      {label}
+      {required && <span className="ml-1 text-rose-500">*</span>}
+      <Select
         id={id}
         className={`form-input mt-2 disabled:cursor-not-allowed disabled:opacity-60 ${className}`.trim()}
-        value={value ?? ''}
+        value={value ?? ""}
         onChange={onChange}
         disabled={disabled}
         required={required}
       >
-        {options.map(([key, optionLabel]) => <option key={key} value={key}>{optionLabel}</option>)}
-      </select>
+        {options.map(([key, optionLabel]) => (
+          <option key={key} value={key}>
+            {optionLabel}
+          </option>
+        ))}
+      </Select>
     </label>
   );
 }
