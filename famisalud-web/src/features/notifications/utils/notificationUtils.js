@@ -98,6 +98,7 @@ export function getNotificationActionLabel(notification) {
   if (metadata.module === 'family' || entityType.includes('invitation') || entityType.includes('family')) return 'Ver invitación';
   if (metadata.module === 'medications' || entityType.includes('medication') || entityType.includes('delivery') || entityType.includes('schedule')) {
     const tab = metadata.destinationTab || (notification?.notification_type === 'RECORDATORIO_MEDICAMENTO' ? 'horarios' : 'tramites');
+    if (notification?.notification_type === 'RECORDATORIO_MEDICAMENTO' && (metadata.scheduleId || metadata.schedule_id)) return 'Registrar toma';
     return tab === 'horarios' ? 'Ver horario' : 'Ver medicamento y trámite';
   }
   return 'Abrir aviso';
@@ -113,7 +114,7 @@ export function getNotificationDestination(notification) {
     const medicationId = metadata.medicationId || metadata.medication_id || '';
     const deliveryId = metadata.deliveryId || metadata.delivery_id || (entityType.includes('deliver') ? entityId : '');
     const scheduleId = metadata.scheduleId || metadata.schedule_id || '';
-    return withQuery('/medicamentos', {
+    const destination = {
       memberId: metadata.memberId || metadata.member_id,
       personId: metadata.personId || metadata.person_id,
       familyId: metadata.familyId || metadata.family_id,
@@ -121,7 +122,9 @@ export function getNotificationDestination(notification) {
       deliveryId,
       scheduleId,
       tab: metadata.destinationTab || (type === 'RECORDATORIO_MEDICAMENTO' ? 'horarios' : 'tramites'),
-    });
+    };
+    if (type === 'RECORDATORIO_MEDICAMENTO' && scheduleId) destination.recordTake = '1';
+    return withQuery('/medicamentos', destination);
   }
 
   if (metadata.module === 'appointments' || entityType.includes('appointment') || entityType.includes('cita')) {

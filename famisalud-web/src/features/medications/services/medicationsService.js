@@ -43,8 +43,12 @@ export function deleteSchedule(memberId, medicationId, scheduleId) {
   return apiFetch(`${medicationPath(memberId, medicationId)}/schedules/${scheduleId}`, { method: 'DELETE' }).then(unwrapApiData);
 }
 
-export function listMedicationLogs(memberId, medicationId, limit = 50) {
-  return apiFetch(`${medicationPath(memberId, medicationId)}/logs?limit=${limit}`).then((response) => readApiList(response, ['logs', 'items']));
+export function listMedicationLogs(memberId, medicationId, limit = 50, filters = {}) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (filters.from) query.set('from', filters.from);
+  if (filters.to) query.set('to', filters.to);
+  if (filters.status) query.set('status', filters.status);
+  return apiFetch(`${medicationPath(memberId, medicationId)}/logs?${query.toString()}`).then((response) => readApiList(response, ['logs', 'items']));
 }
 
 export function createMedicationLog(memberId, medicationId, payload) {
