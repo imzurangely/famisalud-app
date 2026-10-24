@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { CalendarDays, Plus, RefreshCw, ShieldCheck, UsersRound } from 'lucide-react';
+import { useFamilies } from '../../../shared/hooks/useFamily.js';
 import Button from '../../../shared/components/ui/Button.jsx';
 import EmptyState from '../../../shared/components/ui/EmptyState.jsx';
 import { confirmAction, notify } from '../../../shared/utils/feedback.js';
@@ -15,16 +16,32 @@ function InlineError({ message, onClose }) {
 }
 
 export default function AppointmentsPage() {
+  const { families: availableFamilies, selectedFamilyId: activeFamilyId, selectFamily } = useFamilies();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const initialMemberId = searchParams.get('memberId') || '';
+  const initialPersonId = searchParams.get('personId') || '';
+  const targetAppointmentId = searchParams.get('appointmentId') || '';
+  const targetFamilyId = searchParams.get('familyId') || ''; 
+  useEffect(() => {
+    if (targetFamilyId && availableFamilies.some((family) => String(family.id) === String(targetFamilyId)) && String(activeFamilyId) !== String(targetFamilyId)) {
+      selectFamily(targetFamilyId);
+    }
+  }, [targetFamilyId, availableFamilies, activeFamilyId, selectFamily]);
+
   const {
     families, loadingFamilyCollection, selectedFamily, members, selectedMember, selectedMemberId, setSelectedMemberId,
     appointments, statusFilter, setStatusFilter, loadingMembers, loadingAppointments, busy, error,
     clearError, canManageSelected, reloadAppointments, createAppointment, updateAppointment, deleteAppointment,
-  } = useAppointments({ initialMemberId });
+  } = useAppointments({ initialMemberId, initialPersonId });
   const [modalMode, setModalMode] = useState(null);
   const [currentAppointment, setCurrentAppointment] = useState(null);
+
+  useEffect(() => {
+    if (loadingAppointments || !targetAppointmentId) return;
+    const element = document.getElementById(`appointment-${targetAppointmentId}`);
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [appointments, loadingAppointments, targetAppointmentId, selectedMemberId]);
 
   function openCreate() {
     setCurrentAppointment(null);
@@ -67,7 +84,14 @@ export default function AppointmentsPage() {
   }
 
   function openDocuments(appointment) {
-    navigate(`/documentos?memberId=${encodeURIComponent(selectedMemberId)}&appointmentId=${encodeURIComponent(appointment.id)}`);
+    const personId = selectedMember?.personId ?? selectedMember?.person_id ?? selectedMember?.person?.id ?? '';
+    const params = new URLSearchParams({
+      memberId: String(selectedMemberId || ''),
+      appointmentId: String(appointment.id),
+    });
+    if (personId) params.set('personId', String(personId));
+    if (selectedFamily?.id) params.set('familyId', String(selectedFamily.id));
+    navigate(`/documentos?${params.toString()}`);
   }
 
   if (families.length === 0 && !loadingFamilyCollection) {
@@ -126,7 +150,7 @@ export default function AppointmentsPage() {
         <EmptyState icon={CalendarDays} title="No hay citas para mostrar" description={statusFilter ? 'No encontramos citas con ese estado. Prueba otro filtro.' : canManageSelected ? 'Puedes crear la primera cita de este perfil.' : 'Cuando se registren citas para este perfil, aparecerán aquí.'} action={canManageSelected && !statusFilter ? <Button onClick={openCreate}><Plus size={16} /> Programar cita</Button> : null} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {appointments.map((appointment) => <AppointmentCard key={appointment.id} appointment={appointment} canManage={canManageSelected} onEdit={() => openEdit(appointment)} onDelete={() => handleDelete(appointment)} onOpenDocuments={() => openDocuments(appointment)} />)}
+          {appointments.map((appointment) => <AppointmentCard key={appointment.id} appointment={appointment} isTarget={String(appointment.id) === String(targetAppointmentId)} canManage={canManageSelected} onEdit={() => openEdit(appointment)} onDelete={() => handleDelete(appointment)} onOpenDocuments={() => openDocuments(appointment)} />)}
         </div>
       )}
 

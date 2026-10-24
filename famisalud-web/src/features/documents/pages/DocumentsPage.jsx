@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FileText, Plus, RefreshCw, Search, ShieldCheck, UsersRound } from 'lucide-react';
+import { useFamilies } from '../../../shared/hooks/useFamily.js';
 import Button from '../../../shared/components/ui/Button.jsx';
 import EmptyState from '../../../shared/components/ui/EmptyState.jsx';
 import { confirmAction, notify } from '../../../shared/utils/feedback.js';
@@ -15,18 +16,37 @@ function InlineError({ message, onClose }) {
 }
 
 export default function DocumentsPage() {
+  const { families: availableFamilies, selectedFamilyId: activeFamilyId, selectFamily } = useFamilies();
   const [searchParams] = useSearchParams();
   const initialMemberId = searchParams.get('memberId') || '';
+  const initialPersonId = searchParams.get('personId') || '';
   const initialAppointmentId = searchParams.get('appointmentId') || '';
+  const targetDocumentId = searchParams.get('documentId') || '';
+  const targetFamilyId = searchParams.get('familyId') || ''; 
+  useEffect(() => {
+    if (targetFamilyId && availableFamilies.some((family) => String(family.id) === String(targetFamilyId)) && String(activeFamilyId) !== String(targetFamilyId)) {
+      selectFamily(targetFamilyId);
+    }
+  }, [targetFamilyId, availableFamilies, activeFamilyId, selectFamily]);
+
   const {
     families, loadingFamilyCollection, selectedFamily, members, selectedMember, selectedMemberId, setSelectedMemberId,
     appointments, documents, filters, setFilters, loadingMembers, loadingAppointments,
     loadingDocuments, busy, error, clearError, canManageSelected, reloadDocuments,
     createDocument, updateDocument, deleteDocument,
-  } = useDocuments({ initialMemberId, initialAppointmentId });
+  } = useDocuments({ initialMemberId, initialPersonId, initialAppointmentId });
+  useEffect(() => {
+    setFilters((current) => ({ ...current, appointmentId: initialAppointmentId }));
+  }, [initialAppointmentId, setFilters]);
   const [modalMode, setModalMode] = useState(null);
   const [currentDocument, setCurrentDocument] = useState(null);
   const [searchDraft, setSearchDraft] = useState(filters.search || '');
+
+  useEffect(() => {
+    if (loadingDocuments || !targetDocumentId) return;
+    const element = document.getElementById(`document-${targetDocumentId}`);
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [documents, loadingDocuments, targetDocumentId, selectedMemberId]);
 
   function openCreate() {
     setCurrentDocument(null);
@@ -131,6 +151,7 @@ export default function DocumentsPage() {
         <label className="block"><span className="sr-only">Filtrar por cita</span><select className="form-input" value={filters.appointmentId} onChange={(event) => setFilters((current) => ({ ...current, appointmentId: event.target.value }))} disabled={loadingAppointments}><option value="">Todas las citas</option>{appointments.map((appointment) => <option key={appointment.id} value={appointment.id}>{appointment.title || 'Cita médica'}</option>)}</select></label>
       </section>
 
+      {initialAppointmentId && <div className="rounded-xl border border-brand-100 bg-brand-50/70 px-4 py-3 text-xs text-brand-800 dark:border-brand-900/70 dark:bg-brand-950/25 dark:text-brand-200">Mostrando documentos vinculados a la cita seleccionada.</div>}
       <div className="flex items-center justify-between gap-3"><div><h2 className="text-base font-extrabold text-slate-900 dark:text-white">Archivos del perfil</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{documents.length} {documents.length === 1 ? 'documento' : 'documentos'}</p></div>{initialAppointmentId && <button type="button" className="text-xs font-bold text-brand-700 underline dark:text-brand-300" onClick={() => { setFilters((current) => ({ ...current, appointmentId: '' })); }}>Quitar filtro de cita</button>}</div>
 
       {loadingMembers || loadingDocuments ? (
@@ -140,7 +161,7 @@ export default function DocumentsPage() {
       ) : documents.length === 0 ? (
         <EmptyState icon={FileText} title="No hay documentos para mostrar" description={canManageSelected ? 'Puedes subir el primer documento de este perfil.' : 'Cuando se registre información documental, aparecerá aquí.'} action={canManageSelected ? <Button onClick={openCreate}><Plus size={16} /> Subir documento</Button> : null} />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{documents.map((document) => <DocumentCard key={document.id} document={document} canManage={canManageSelected} onEdit={() => openEdit(document)} onDelete={() => handleDelete(document)} />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{documents.map((document) => <DocumentCard key={document.id} document={document} isTarget={String(document.id) === String(targetDocumentId)} canManage={canManageSelected} onEdit={() => openEdit(document)} onDelete={() => handleDelete(document)} />)}</div>
       )}
 
       {modalMode && <DocumentFormModal mode={modalMode} document={currentDocument} appointments={appointments} loadingAppointments={loadingAppointments} busy={busy} onClose={() => { if (!busy) { setModalMode(null); setCurrentDocument(null); } }} onSubmit={handleSave} />}

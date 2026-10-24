@@ -1,3 +1,5 @@
+import { friendlyErrorMessage } from '../../../shared/utils/friendlyErrors.js';
+
 export function fieldValue(record, camelName) {
   if (!record) return null;
   const snakeName = camelName.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
@@ -164,10 +166,5 @@ export function humanizeEventType(value) {
 }
 
 export function errorMessage(error) {
-  const issues = error?.data?.errors;
-  if (Array.isArray(issues) && issues.length) {
-    const messages = [...new Set(issues.map((item) => item?.message).filter(Boolean))];
-    if (messages.length) return messages.join(' ');
-  }
-  return error?.message || 'Ocurrió un error inesperado.';
+  return friendlyErrorMessage(error);
 }

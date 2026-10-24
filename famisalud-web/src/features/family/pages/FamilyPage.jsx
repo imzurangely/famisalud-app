@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ArrowLeftRight,
   ChevronDown,
@@ -41,6 +42,10 @@ import MemberDetailsModal from "../components/MemberDetailsModal.jsx";
 import MemberFormModal from "../components/MemberFormModal.jsx";
 
 export default function FamilyPage() {
+  const [searchParams] = useSearchParams();
+  const targetFamilyId = searchParams.get('familyId') || '';
+  const targetInvitationId = searchParams.get('invitationId') || '';
+  const requestedTab = searchParams.get('tab') || '';
   const { user } = useAuth();
   const {
     families,
@@ -122,6 +127,22 @@ export default function FamilyPage() {
     setNotice(null);
     clearError();
   }, [selectedFamilyId, clearError]);
+
+  useEffect(() => {
+    if (targetFamilyId && families.some((family) => String(family.id) === String(targetFamilyId)) && String(selectedFamilyId) !== String(targetFamilyId)) {
+      selectFamily(targetFamilyId);
+    }
+  }, [targetFamilyId, families, selectedFamilyId, selectFamily]);
+
+  useEffect(() => {
+    if (requestedTab === 'sent' || requestedTab === 'received') setTab(requestedTab);
+  }, [requestedTab, targetInvitationId, selectedFamilyId]);
+
+  useEffect(() => {
+    if (!targetInvitationId || loadingPanel) return;
+    const element = document.getElementById(`invitation-${targetInvitationId}`);
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [targetInvitationId, loadingPanel, sentInvitations, receivedInvitations, tab]);
 
   const handleCreateFamily = useCallback(
     async (event) => {
@@ -811,8 +832,9 @@ export default function FamilyPage() {
                   <div className="space-y-3">
                     {sentInvitations.map((invitation) => (
                       <article
+                        id={`invitation-${invitation.id}`}
                         key={invitation.id}
-                        className="surface-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                        className={`surface-card flex flex-col gap-3 p-4 transition sm:flex-row sm:items-center sm:justify-between ${String(invitation.id) === String(targetInvitationId) ? 'ring-2 ring-brand-400' : ''}`}
                       >
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -882,8 +904,9 @@ export default function FamilyPage() {
                   <div className="space-y-3">
                     {receivedInvitations.map((invitation) => (
                       <article
+                        id={`invitation-${invitation.id}`}
                         key={invitation.id}
-                        className="surface-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                        className={`surface-card flex flex-col gap-3 p-4 transition sm:flex-row sm:items-center sm:justify-between ${String(invitation.id) === String(targetInvitationId) ? 'ring-2 ring-brand-400' : ''}`}
                       >
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">

@@ -1,10 +1,7 @@
+import { friendlyErrorMessage } from '../../../shared/utils/friendlyErrors.js';
+
 export function formatApiError(error) {
-  const issues = error?.data?.errors;
-  if (Array.isArray(issues) && issues.length) {
-    const messages = [...new Set(issues.map((issue) => issue?.message).filter(Boolean))];
-    if (messages.length) return messages.join(' ');
-  }
-  return error?.message || 'Ocurrió un error inesperado. Inténtalo de nuevo.';
+  return friendlyErrorMessage(error, 'Ocurrió un problema. Inténtalo de nuevo.');
 }
 
 export function isValidPassword(password) {

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowUpRight,
   BellRing,
@@ -19,6 +19,7 @@ import {
   Trash2,
   UsersRound,
 } from 'lucide-react';
+import { useFamilies } from '../../../shared/hooks/useFamily.js';
 import Button from '../../../shared/components/ui/Button.jsx';
 import EmptyState from '../../../shared/components/ui/EmptyState.jsx';
 import { confirmAction, notify } from '../../../shared/utils/feedback.js';
@@ -97,12 +98,12 @@ function MedicationLogRow({ log, canManage, onEdit }) {
   return <div className="flex flex-col gap-2 rounded-xl border border-slate-100 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/50 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 items-start gap-3"><span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-200"><Clock3 size={15} /></span><div className="min-w-0"><p className="text-xs font-bold text-slate-800 dark:text-slate-100">{formatDateTime(fieldValue(log, 'scheduledAt'))}</p><p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{fieldValue(log, 'takenAt') ? `Tomada: ${formatDateTime(fieldValue(log, 'takenAt'))}` : fieldValue(log, 'notes') || 'Sin nota adicional'}</p></div></div><div className="flex items-center gap-2 self-end sm:self-auto"><StatusPill status={status} label={LOG_STATUSES.find(([key]) => key === status)?.[1] || status} className={logStatusTone(status)} />{canManage && <button type="button" className="rounded-lg px-2.5 py-2 text-[10px] font-bold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/50" onClick={onEdit}>Editar</button>}</div></div>;
 }
 
-function ScheduleCard({ schedule, canManage, onEdit, onDelete }) {
+function ScheduleCard({ schedule, canManage, onEdit, onDelete, target = false }) {
   const hour = String(fieldValue(schedule, 'hour') || '').slice(0, 5);
-  return <article className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/50"><div className="flex items-start justify-between gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-200"><CalendarClock size={18} /></span>{hour && <span className="rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-extrabold text-brand-700 dark:bg-brand-950/50 dark:text-brand-200">{hour}</span>}</div><h3 className="mt-3 text-sm font-extrabold text-slate-900 dark:text-white">{SCHEDULE_TYPES.find(([key]) => key === fieldValue(schedule, 'scheduleType'))?.[1] || 'Horario'}</h3><p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{scheduleDescription(schedule)}</p><div className="mt-3 space-y-1 text-[11px] text-slate-500 dark:text-slate-400"><p>Desde {formatDate(fieldValue(schedule, 'startDate'))}</p><p>Hasta {fieldValue(schedule, 'endDate') ? formatDate(fieldValue(schedule, 'endDate')) : 'Sin fecha de finalización'}</p></div>{canManage && <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800"><button type="button" onClick={onEdit} className="rounded-lg px-3 py-2 text-[11px] font-bold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/50">Editar</button><button type="button" onClick={onDelete} className="rounded-lg px-3 py-2 text-[11px] font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/40">Desactivar</button></div>}</article>;
+  return <article id={`schedule-${schedule.id}`} className={`rounded-2xl border bg-white p-4 transition dark:bg-slate-950/50 ${target ? 'border-brand-400 ring-2 ring-brand-200 dark:border-brand-500 dark:ring-brand-900' : 'border-slate-200 dark:border-slate-800'}`}><div className="flex items-start justify-between gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-200"><CalendarClock size={18} /></span>{hour && <span className="rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs font-extrabold text-brand-700 dark:bg-brand-950/50 dark:text-brand-200">{hour}</span>}</div><h3 className="mt-3 text-sm font-extrabold text-slate-900 dark:text-white">{SCHEDULE_TYPES.find(([key]) => key === fieldValue(schedule, 'scheduleType'))?.[1] || 'Horario'}</h3><p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{scheduleDescription(schedule)}</p><div className="mt-3 space-y-1 text-[11px] text-slate-500 dark:text-slate-400"><p>Desde {formatDate(fieldValue(schedule, 'startDate'))}</p><p>Hasta {fieldValue(schedule, 'endDate') ? formatDate(fieldValue(schedule, 'endDate')) : 'Sin fecha de finalización'}</p></div>{canManage && <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800"><button type="button" onClick={onEdit} className="rounded-lg px-3 py-2 text-[11px] font-bold text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/50">Editar</button><button type="button" onClick={onDelete} className="rounded-lg px-3 py-2 text-[11px] font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/40">Desactivar</button></div>}</article>;
 }
 
-function DeliveryCard({ delivery, canManage, busy, onPendingPharmacy, onConfirmRenewal, onCollect }) {
+function DeliveryCard({ delivery, canManage, busy, onPendingPharmacy, onConfirmRenewal, onCollect, target = false }) {
   const status = fieldValue(delivery, 'status');
   const canCollect = ['LISTO_PARA_RECOGER', 'PENDIENTE_FARMACIA'].includes(status);
   const needsRenewalAction = status === 'RENOVACION_PENDIENTE';
@@ -114,7 +115,7 @@ function DeliveryCard({ delivery, canManage, busy, onPendingPharmacy, onConfirmR
     RECOGIDO: 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-200',
     PERDIDA: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
   }[status] || 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
-  return <article className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/50"><div className="flex items-start justify-between gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-200"><PackageCheck size={18} /></span><StatusPill status={status} label={DELIVERY_STATUSES[status] || status} className={statusColor} /></div><div className="mt-3 flex items-start justify-between gap-2"><h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Entrega #{fieldValue(delivery, 'deliveryNumber') ?? '—'}</h3><span className="text-[10px] font-semibold text-slate-400">{fieldValue(delivery, 'authorizationNumber') || 'Autorización'}</span></div><div className="mt-3 grid gap-3 sm:grid-cols-2"><InfoLine icon={CalendarClock} label="Fecha programada" value={formatDate(fieldValue(delivery, 'scheduledDate'))} /><InfoLine icon={Clock3} label="Fecha límite" value={formatDate(fieldValue(delivery, 'pickupDeadline'))} /></div>{fieldValue(delivery, 'pickedUpDate') && <p className="mt-3 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">Recogida confirmada: {formatDate(fieldValue(delivery, 'pickedUpDate'))}</p>}{fieldValue(delivery, 'pharmacyName') && <p className="mt-3 flex items-start gap-1.5 text-[11px] text-slate-500 dark:text-slate-400"><MapPin size={13} className="mt-0.5 shrink-0" />{fieldValue(delivery, 'pharmacyName')}{fieldValue(delivery, 'pharmacyAddress') ? ` · ${fieldValue(delivery, 'pharmacyAddress')}` : ''}</p>}{canManage && (canCollect || needsRenewalAction) && <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">{canCollect && <Button onClick={onCollect} disabled={busy} className="flex-1">{status === 'PENDIENTE_FARMACIA' ? 'Confirmar recogida' : 'Marcar como recogida'}</Button>}{status === 'LISTO_PARA_RECOGER' && <Button variant="secondary" onClick={onPendingPharmacy} disabled={busy}>Sin existencias</Button>}{needsRenewalAction && <Button onClick={onConfirmRenewal} disabled={busy} className="w-full">Ya gestioné la renovación</Button>}</div>}</article>;
+  return <article id={`delivery-${delivery.id}`} className={`rounded-2xl border bg-white p-4 transition dark:bg-slate-950/50 ${target ? 'border-brand-400 ring-2 ring-brand-200 dark:border-brand-500 dark:ring-brand-900' : 'border-slate-200 dark:border-slate-800'}`}><div className="flex items-start justify-between gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-200"><PackageCheck size={18} /></span><StatusPill status={status} label={DELIVERY_STATUSES[status] || status} className={statusColor} /></div><div className="mt-3 flex items-start justify-between gap-2"><h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Entrega #{fieldValue(delivery, 'deliveryNumber') ?? '—'}</h3><span className="text-[10px] font-semibold text-slate-400">{fieldValue(delivery, 'authorizationNumber') || 'Autorización'}</span></div><div className="mt-3 grid gap-3 sm:grid-cols-2"><InfoLine icon={CalendarClock} label="Fecha programada" value={formatDate(fieldValue(delivery, 'scheduledDate'))} /><InfoLine icon={Clock3} label="Fecha límite" value={formatDate(fieldValue(delivery, 'pickupDeadline'))} /></div>{fieldValue(delivery, 'pickedUpDate') && <p className="mt-3 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">Recogida confirmada: {formatDate(fieldValue(delivery, 'pickedUpDate'))}</p>}{fieldValue(delivery, 'pharmacyName') && <p className="mt-3 flex items-start gap-1.5 text-[11px] text-slate-500 dark:text-slate-400"><MapPin size={13} className="mt-0.5 shrink-0" />{fieldValue(delivery, 'pharmacyName')}{fieldValue(delivery, 'pharmacyAddress') ? ` · ${fieldValue(delivery, 'pharmacyAddress')}` : ''}</p>}{canManage && (canCollect || needsRenewalAction) && <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">{canCollect && <Button onClick={onCollect} disabled={busy} className="flex-1">{status === 'PENDIENTE_FARMACIA' ? 'Confirmar recogida' : 'Marcar como recogida'}</Button>}{status === 'LISTO_PARA_RECOGER' && <Button variant="secondary" onClick={onPendingPharmacy} disabled={busy}>Sin existencias</Button>}{needsRenewalAction && <Button onClick={onConfirmRenewal} disabled={busy} className="w-full">Ya gestioné la renovación</Button>}</div>}</article>;
 }
 
 function AuthorizationPanel({ summary, canManage, busy, onRequest, onCreate, onEdit, onRenew, onCancel }) {
@@ -138,13 +139,31 @@ function AuthorizationPanel({ summary, canManage, busy, onRequest, onCreate, onE
 }
 
 export default function MedicationsPage() {
+  const { families: availableFamilies, selectedFamilyId: activeFamilyId, selectFamily } = useFamilies();
+  const [searchParams] = useSearchParams();
+  const targetMemberId = searchParams.get('memberId') || '';
+  const targetPersonId = searchParams.get('personId') || '';
+  const targetMedicationId = searchParams.get('medicationId') || '';
+  const targetDeliveryId = searchParams.get('deliveryId') || '';
+  const targetScheduleId = searchParams.get('scheduleId') || '';
+  const targetTab = searchParams.get('tab') || 'resumen';
+  const targetFamilyId = searchParams.get('familyId') || '';
+  useEffect(() => {
+    if (targetFamilyId && availableFamilies.some((family) => String(family.id) === String(targetFamilyId)) && String(activeFamilyId) !== String(targetFamilyId)) {
+      selectFamily(targetFamilyId);
+    }
+  }, [targetFamilyId, availableFamilies, activeFamilyId, selectFamily]);
+
   const {
     families, selectedFamily, loadingFamilies, members, selectedMember, selectedMemberId, setSelectedMemberId,
     medications, selectedMedication, selectedMedicationId, setSelectedMedicationId, schedules, logs, processSummary,
     epsCompanies, loadingMembers, loadingMedications, loadingDetails, refreshing, error, clearError,
     canManageSelected, reloadMedications, reloadDetails, reloadEverything,
-  } = useMedications();
-  const [activeTab, setActiveTab] = useState('resumen');
+  } = useMedications({ initialMemberId: targetMemberId, initialPersonId: targetPersonId, initialMedicationId: targetMedicationId });
+  const [activeTab, setActiveTab] = useState(() => TABS.some((tab) => tab.id === targetTab) ? targetTab : 'resumen');
+  useEffect(() => {
+    setActiveTab(TABS.some((tab) => tab.id === targetTab) ? targetTab : 'resumen');
+  }, [targetTab]);
   const [actionBusy, setActionBusy] = useState('');
   const [medicationModalMode, setMedicationModalMode] = useState(null);
   const [scheduleModalMode, setScheduleModalMode] = useState(null);
@@ -164,6 +183,14 @@ export default function MedicationsPage() {
   const sortedLogs = [...logs].sort((a, b) => new Date(fieldValue(b, 'scheduledAt') || 0) - new Date(fieldValue(a, 'scheduledAt') || 0));
   const deliveries = [...(processSummary?.deliveries || [])].sort((a, b) => new Date(fieldValue(b, 'scheduledDate') || 0) - new Date(fieldValue(a, 'scheduledDate') || 0));
   const processHistory = processSummary?.history || [];
+
+  useEffect(() => {
+    if (loadingDetails || !selectedMedicationId || activeTab !== targetTab) return;
+    const targetId = targetDeliveryId ? `delivery-${targetDeliveryId}` : targetScheduleId ? `schedule-${targetScheduleId}` : '';
+    if (!targetId) return;
+    const element = document.getElementById(targetId);
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [loadingDetails, selectedMedicationId, activeTab, targetTab, targetDeliveryId, targetScheduleId, deliveries, schedules]);
 
   function openMedicationForm(mode, medication = null) {
     setSelectedMedicationId(medication?.id || selectedMedicationId);
@@ -370,14 +397,14 @@ export default function MedicationsPage() {
 
           {activeTab === 'horarios' && <div className="space-y-6">
             <SectionHeading title="Horarios del medicamento" description="Puedes configurar horarios diarios, por días de la semana, por intervalo, mensuales o según necesidad." action={canManageSelected ? <Button onClick={() => openScheduleForm('create')}><Plus size={15} /> Nuevo horario</Button> : null} />
-            {loadingDetails ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="surface-card h-48 animate-pulse" />)}</div> : activeSchedules.length === 0 ? <EmptyState icon={CalendarClock} title="No hay horarios activos" description={canManageSelected ? 'Crea un horario para mantener organizadas las tomas de este medicamento.' : 'Este medicamento todavía no tiene horarios registrados.'} action={canManageSelected ? <Button onClick={() => openScheduleForm('create')}><Plus size={15} /> Crear horario</Button> : null} /> : <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{activeSchedules.map((schedule) => <ScheduleCard key={schedule.id} schedule={schedule} canManage={canManageSelected} onEdit={() => openScheduleForm('edit', schedule)} onDelete={() => handleScheduleDelete(schedule)} />)}</div>}
+            {loadingDetails ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="surface-card h-48 animate-pulse" />)}</div> : activeSchedules.length === 0 ? <EmptyState icon={CalendarClock} title="No hay horarios activos" description={canManageSelected ? 'Crea un horario para mantener organizadas las tomas de este medicamento.' : 'Este medicamento todavía no tiene horarios registrados.'} action={canManageSelected ? <Button onClick={() => openScheduleForm('create')}><Plus size={15} /> Crear horario</Button> : null} /> : <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{activeSchedules.map((schedule) => <ScheduleCard key={schedule.id} schedule={schedule} target={String(schedule.id) === String(targetScheduleId)} canManage={canManageSelected} onEdit={() => openScheduleForm('edit', schedule)} onDelete={() => handleScheduleDelete(schedule)} />)}</div>}
             <div className="border-t border-slate-100 pt-5 dark:border-slate-800"><SectionHeading title="Registro de tomas" description="Registra si la dosis fue tomada, olvidada, omitida o tomada con retraso." action={canManageSelected ? <Button onClick={() => openLogForm('create')}><Plus size={15} /> Registrar toma</Button> : null} /><div className="mt-3 space-y-2">{sortedLogs.map((log) => <MedicationLogRow key={log.id} log={log} canManage={canManageSelected} onEdit={() => openLogForm('edit', log)} />)}{sortedLogs.length === 0 && <EmptyState icon={Clock3} title="Sin tomas registradas" description="Aquí aparecerán los registros de seguimiento de este medicamento." action={canManageSelected ? <Button onClick={() => openLogForm('create')}><Plus size={15} /> Registrar primera toma</Button> : null} />}</div></div>
           </div>}
 
           {activeTab === 'tramites' && <div className="space-y-6">
             <SectionHeading eyebrow="Autorizaciones y renovaciones" title="Estado del trámite" description="La autorización genera la primera entrega. Después, el sistema calcula los ciclos según la periodicidad y la fecha real de recogida." />
             {loadingDetails ? <div className="surface-card h-48 animate-pulse" /> : <AuthorizationPanel summary={processSummary} canManage={canManageSelected} busy={Boolean(actionBusy)} onRequest={() => runProcessAction('authorization-request', () => requestMedicationAuthorization(selectedMemberId, selectedMedicationId, {}), 'Solicitud de autorización registrada.')} onCreate={() => openAuthorizationForm('create')} onEdit={() => openAuthorizationForm('edit', processSummary?.currentAuthorization)} onRenew={() => openAuthorizationForm('renewal', processSummary?.currentAuthorization)} onCancel={handleAuthorizationCancel} />}
-            <div className="border-t border-slate-100 pt-5 dark:border-slate-800"><SectionHeading title="Entregas y recogidas" description="Marca cuando la farmacia no tenga existencias, cuando hayas gestionado la renovación o cuando realmente recojas el medicamento." /><div className="mt-4 grid gap-3 xl:grid-cols-2">{deliveries.map((delivery) => <DeliveryCard key={delivery.id} delivery={delivery} canManage={canManageSelected} busy={Boolean(actionBusy)} onPendingPharmacy={() => runProcessAction(`delivery-pending-${delivery.id}`, () => markDeliveryPendingPharmacy(selectedMemberId, selectedMedicationId, delivery.id), 'Entrega marcada como pendiente por disponibilidad de farmacia.')} onConfirmRenewal={() => runProcessAction(`delivery-renewal-${delivery.id}`, () => confirmDeliveryRenewalManaged(selectedMemberId, selectedMedicationId, delivery.id), 'Renovación confirmada. La entrega quedó lista para recoger.')} onCollect={() => setCollectingDelivery(delivery)} />)}{deliveries.length === 0 && <div className="xl:col-span-2"><EmptyState icon={PackageCheck} title="Aún no hay entregas" description="Al registrar la autorización aprobada, la primera entrega aparecerá aquí automáticamente." /></div>}</div></div>
+            <div className="border-t border-slate-100 pt-5 dark:border-slate-800"><SectionHeading title="Entregas y recogidas" description="Marca cuando la farmacia no tenga existencias, cuando hayas gestionado la renovación o cuando realmente recojas el medicamento." /><div className="mt-4 grid gap-3 xl:grid-cols-2">{deliveries.map((delivery) => <DeliveryCard key={delivery.id} delivery={delivery} target={String(delivery.id) === String(targetDeliveryId)} canManage={canManageSelected} busy={Boolean(actionBusy)} onPendingPharmacy={() => runProcessAction(`delivery-pending-${delivery.id}`, () => markDeliveryPendingPharmacy(selectedMemberId, selectedMedicationId, delivery.id), 'Entrega marcada como pendiente por disponibilidad de farmacia.')} onConfirmRenewal={() => runProcessAction(`delivery-renewal-${delivery.id}`, () => confirmDeliveryRenewalManaged(selectedMemberId, selectedMedicationId, delivery.id), 'Renovación confirmada. La entrega quedó lista para recoger.')} onCollect={() => setCollectingDelivery(delivery)} />)}{deliveries.length === 0 && <div className="xl:col-span-2"><EmptyState icon={PackageCheck} title="Aún no hay entregas" description="Al registrar la autorización aprobada, la primera entrega aparecerá aquí automáticamente." /></div>}</div></div>
           </div>}
 
           {activeTab === 'historial' && <div className="space-y-6">

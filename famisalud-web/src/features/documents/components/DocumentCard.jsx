@@ -2,13 +2,13 @@ import { ExternalLink, FileImage, FileText, Pencil, Trash2 } from 'lucide-react'
 import Button from '../../../shared/components/ui/Button.jsx';
 import { documentCategoryLabel, formatDocumentDate, formatFileSize, valueOf } from '../utils/documentUtils.js';
 
-export default function DocumentCard({ document, canManage, onEdit, onDelete }) {
+export default function DocumentCard({ document, canManage, onEdit, onDelete, isTarget = false }) {
   const fileUrl = valueOf(document, 'fileUrl', 'file_url');
   const fileName = valueOf(document, 'originalFileName', 'original_file_name') || 'Archivo clínico';
   const mimeType = valueOf(document, 'mimeType', 'mime_type') || '';
   const Icon = mimeType.startsWith('image/') ? FileImage : FileText;
   return (
-    <article className="surface-card flex h-full flex-col p-5">
+    <article id={`document-${document.id}`} className={`surface-card flex h-full flex-col p-5 transition ${isTarget ? 'ring-2 ring-brand-400 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-950' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300"><Icon size={21} /></span>
         <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-bold text-violet-700 dark:bg-violet-950/50 dark:text-violet-200">{documentCategoryLabel(document)}</span>

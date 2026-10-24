@@ -2,6 +2,7 @@ import { ArrowUpRight, Check, Circle } from 'lucide-react';
 import {
   formatNotificationDate,
   getNotificationDestination,
+  getNotificationActionLabel,
   getNotificationIconClass,
   getNotificationPresentation,
   notificationIsUnread,
@@ -19,13 +20,20 @@ export default function NotificationItem({ notification, onOpen, onMarkRead, bus
         <Icon size={18} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
-          <h3 className={`min-w-0 flex-1 text-xs leading-relaxed ${unread ? 'font-extrabold text-slate-900 dark:text-white' : 'font-semibold text-slate-700 dark:text-slate-200'}`}>
-            {notification.title || presentation.label}
-          </h3>
-          {unread && <span className="mt-1 size-2 shrink-0 rounded-full bg-brand-500" aria-label="No leída" title="No leída" />}
+        <div className="flex items-start gap-2">
+          <button
+            type="button"
+            onClick={() => onOpen(notification, getNotificationDestination(notification))}
+            className="min-w-0 flex-1 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            aria-label={`Abrir ${notification.title || presentation.label}`}
+          >
+            <h3 className={`text-xs leading-relaxed ${unread ? 'font-extrabold text-slate-900 dark:text-white' : 'font-semibold text-slate-700 dark:text-slate-200'}`}>
+              {notification.title || presentation.label}
+            </h3>
+            {notification.body && <p className="mt-1.5 whitespace-pre-line text-xs leading-relaxed text-slate-600 dark:text-slate-300">{notification.body}</p>}
+          </button>
+          {unread && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand-500" aria-label="No leída" title="No leída" />}
         </div>
-        {notification.body && <p className="mt-1.5 whitespace-pre-line text-xs leading-relaxed text-slate-600 dark:text-slate-300">{notification.body}</p>}
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-400">
           <span>{presentation.label}</span>
           <span aria-hidden="true">·</span>
@@ -34,7 +42,7 @@ export default function NotificationItem({ notification, onOpen, onMarkRead, bus
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" onClick={() => onOpen(notification, getNotificationDestination(notification))} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-brand-700 transition hover:bg-brand-50 dark:border-brand-900 dark:bg-slate-900 dark:text-brand-300 dark:hover:bg-brand-950/50">
-            Abrir módulo <ArrowUpRight size={13} />
+            {getNotificationActionLabel(notification)} <ArrowUpRight size={13} />
           </button>
           {unread && <button type="button" disabled={busy} onClick={() => onMarkRead(notification)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-semibold text-slate-500 transition hover:bg-slate-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"><Circle size={11} /> {busy ? 'Guardando…' : 'Marcar como leída'}</button>}
         </div>

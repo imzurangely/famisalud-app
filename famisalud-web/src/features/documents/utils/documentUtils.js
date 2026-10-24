@@ -1,3 +1,5 @@
+import { friendlyErrorMessage } from '../../../shared/utils/friendlyErrors.js';
+
 export const DOCUMENT_CATEGORIES = [
   { value: 'RESULTADO_EXAMENES', label: 'Resultado de exámenes' },
   { value: 'HISTORIA_CLINICA', label: 'Historia clínica' },
@@ -43,12 +45,7 @@ export function formatFileSize(size) {
 }
 
 export function errorMessage(error) {
-  const issues = error?.data?.errors;
-  if (Array.isArray(issues) && issues.length) {
-    const messages = [...new Set(issues.map((item) => item?.message).filter(Boolean))];
-    if (messages.length) return messages.join(' ');
-  }
-  return error?.message || 'Ocurrió un error inesperado.';
+  return friendlyErrorMessage(error);
 }
 
 export function buildDocumentFormData(values, { requireFile = false } = {}) {

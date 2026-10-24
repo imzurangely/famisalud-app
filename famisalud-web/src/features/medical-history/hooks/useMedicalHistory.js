@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../../shared/hooks/useAuth.js";
+import { friendlyErrorMessage } from "../../../shared/utils/friendlyErrors.js";
 import { useFamilies } from "../../../shared/hooks/useFamily.js";
 import { listFamilyMembers } from "../../family/services/familyMemberService.js";
 import {
@@ -59,14 +60,7 @@ function linkedUserId(member) {
 }
 
 function cleanError(error) {
-  const issues = error?.data?.errors;
-  if (Array.isArray(issues) && issues.length) {
-    const messages = [
-      ...new Set(issues.map((item) => item?.message).filter(Boolean)),
-    ];
-    if (messages.length) return messages.join(" ");
-  }
-  return error?.message || "Ocurrió un error inesperado.";
+  return friendlyErrorMessage(error, "Ocurrió un problema al guardar la información. Inténtalo de nuevo.");
 }
 
 /** Estado y operaciones del módulo; los servicios únicamente hacen solicitudes HTTP. */

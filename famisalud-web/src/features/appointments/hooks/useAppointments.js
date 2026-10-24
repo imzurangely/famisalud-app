@@ -14,15 +14,21 @@ function linkedUserId(member) {
   return member?.linkedUserId ?? member?.linked_user_id ?? member?.person?.userId ?? member?.person?.user_id ?? null;
 }
 
-function preferredMemberId(members, userId, preferredId = '') {
+function personIdOf(member) {
+  return member?.personId ?? member?.person_id ?? member?.person?.id ?? member?.person?.personId ?? member?.person?.person_id ?? '';
+}
+
+function preferredMemberId(members, userId, preferredId = '', preferredPersonId = '') {
   if (preferredId && members.some((member) => String(member.id) === String(preferredId))) return String(preferredId);
+  const byPerson = preferredPersonId && members.find((member) => String(personIdOf(member)) === String(preferredPersonId));
+  if (byPerson) return String(byPerson.id);
   const own = members.find((member) => String(linkedUserId(member)) === String(userId))
     || members.find((member) => String(member.relationship || '').toUpperCase() === 'YO_MISMO');
   return String(own?.id || members[0]?.id || '');
 }
 
 /** El hook concentra carga, errores y mutaciones; el servicio solo conoce HTTP. */
-export function useAppointments({ initialMemberId = '' } = {}) {
+export function useAppointments({ initialMemberId = '', initialPersonId = '' } = {}) {
   const { user } = useAuth();
   const { families, selectedFamily, selectedFamilyId, loadingFamilies: loadingFamilyCollection } = useFamilies();
   const [members, setMembers] = useState([]);
@@ -51,7 +57,7 @@ export function useAppointments({ initialMemberId = '' } = {}) {
       .then((result) => {
         if (!active) return;
         setMembers(result);
-        setSelectedMemberId(preferredMemberId(result, user?.id, initialMemberId));
+        setSelectedMemberId(preferredMemberId(result, user?.id, initialMemberId, initialPersonId));
       })
       .catch((requestError) => {
         if (active) setError(errorMessage(requestError));
@@ -61,7 +67,7 @@ export function useAppointments({ initialMemberId = '' } = {}) {
       });
 
     return () => { active = false; };
-  }, [selectedFamilyId, user?.id, initialMemberId]);
+  }, [selectedFamilyId, user?.id, initialMemberId, initialPersonId]);
 
   const selectedMember = useMemo(
     () => members.find((member) => String(member.id) === String(selectedMemberId)) || null,

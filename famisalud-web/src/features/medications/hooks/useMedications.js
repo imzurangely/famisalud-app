@@ -11,13 +11,21 @@ import {
 } from '../services/medicationsService.js';
 import { errorMessage, linkedUserId } from '../utils/medicationUtils.js';
 
-function preferredMemberId(members, userId) {
+function personIdOf(member) {
+  return member?.personId ?? member?.person_id ?? member?.person?.id ?? member?.person?.personId ?? member?.person?.person_id ?? '';
+}
+
+function preferredMemberId(members, userId, preferredMemberId = '', preferredPersonId = '') {
+  const byId = preferredMemberId && members.find((member) => String(member.id) === String(preferredMemberId));
+  if (byId) return String(byId.id);
+  const byPerson = preferredPersonId && members.find((member) => String(personIdOf(member)) === String(preferredPersonId));
+  if (byPerson) return String(byPerson.id);
   const own = members.find((member) => String(linkedUserId(member)) === String(userId))
     || members.find((member) => Boolean(member?.is_own_member ?? member?.isOwnMember));
   return String(own?.id || members[0]?.id || '');
 }
 
-export function useMedications() {
+export function useMedications({ initialMemberId = '', initialPersonId = '', initialMedicationId = '' } = {}) {
   const { user } = useAuth();
   const { families, selectedFamily, selectedFamilyId, loadingFamilies } = useFamilies();
   const [members, setMembers] = useState([]);
@@ -55,7 +63,7 @@ export function useMedications() {
       .then((result) => {
         if (!active) return;
         setMembers(result);
-        setSelectedMemberId(preferredMemberId(result, user?.id));
+        setSelectedMemberId(preferredMemberId(result, user?.id, initialMemberId, initialPersonId));
       })
       .catch((requestError) => {
         if (active) setError(errorMessage(requestError));
@@ -65,7 +73,7 @@ export function useMedications() {
       });
 
     return () => { active = false; };
-  }, [selectedFamilyId, user?.id]);
+  }, [selectedFamilyId, user?.id, initialMemberId, initialPersonId]);
 
   useEffect(() => {
     let active = true;
@@ -86,10 +94,13 @@ export function useMedications() {
       .then((result) => {
         if (!active) return;
         setMedications(result);
+        const linkedMedication = result.find((medication) => String(medication.id) === String(initialMedicationId));
         setSelectedMedicationId((currentId) => (
-          result.some((medication) => String(medication.id) === String(currentId))
-            ? currentId
-            : String(result[0]?.id || '')
+          linkedMedication
+            ? String(linkedMedication.id)
+            : result.some((medication) => String(medication.id) === String(currentId))
+              ? currentId
+              : String(result[0]?.id || '')
         ));
       })
       .catch((requestError) => {
@@ -100,7 +111,7 @@ export function useMedications() {
       });
 
     return () => { active = false; };
-  }, [selectedMemberId]);
+  }, [selectedMemberId, initialMedicationId]);
 
   useEffect(() => {
     let active = true;

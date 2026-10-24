@@ -2,11 +2,11 @@ import { CalendarClock, FileText, MapPin, Pencil, Trash2, UserRound } from 'luci
 import Button from '../../../shared/components/ui/Button.jsx';
 import { appointmentStatusClass, appointmentStatusLabel, appointmentTypeLabel, formatAppointmentDate, valueOf } from '../utils/appointmentUtils.js';
 
-export default function AppointmentCard({ appointment, canManage, onEdit, onDelete, onOpenDocuments }) {
+export default function AppointmentCard({ appointment, canManage, onEdit, onDelete, onOpenDocuments, isTarget = false }) {
   const start = valueOf(appointment, 'startsAt', 'starts_at');
   const end = valueOf(appointment, 'endsAt', 'ends_at');
   return (
-    <article className="surface-card flex h-full flex-col p-5">
+    <article id={`appointment-${appointment.id}`} className={`surface-card flex h-full flex-col p-5 transition ${isTarget ? 'ring-2 ring-brand-400 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-950' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300"><CalendarClock size={20} /></div>
         <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${appointmentStatusClass(appointment)}`}>{appointmentStatusLabel(appointment)}</span>

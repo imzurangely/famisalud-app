@@ -1,3 +1,5 @@
+import { friendlyErrorMessage } from '../../../shared/utils/friendlyErrors.js';
+
 export const APPOINTMENT_TYPES = [
   { value: 'CONSULTA_MEDICA', label: 'Consulta médica' },
   { value: 'EXAMEN', label: 'Examen' },
@@ -79,10 +81,5 @@ export function toDateTimeInput(value) {
 }
 
 export function errorMessage(error) {
-  const issues = error?.data?.errors;
-  if (Array.isArray(issues) && issues.length) {
-    const messages = [...new Set(issues.map((item) => item?.message).filter(Boolean))];
-    if (messages.length) return messages.join(' ');
-  }
-  return error?.message || 'Ocurrió un error inesperado.';
+  return friendlyErrorMessage(error);
 }
