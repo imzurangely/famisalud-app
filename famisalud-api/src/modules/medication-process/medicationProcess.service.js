@@ -1129,11 +1129,11 @@ export async function getSummary(memberId, medicationId, userId) {
   return withTransaction(async (client) => {
     await assertCanViewMember(client, memberId, userId);
     const medication = await getMedicationOrFail(client, medicationId, memberId);
-    const [authorizations, deliveries, history] = await Promise.all([
-      repository.listAuthorizations(client, medicationId, 10),
-      repository.listDeliveries(client, medicationId, { limit: 50 }),
-      repository.listProcessHistory(client, medicationId, 20)
-    ]);
+    
+    // Ejecutamos secuencialmente para no saturar el mismo client de la transacción
+    const authorizations = await repository.listAuthorizations(client, medicationId, 10);
+    const deliveries = await repository.listDeliveries(client, medicationId, { limit: 50 });
+    const history = await repository.listProcessHistory(client, medicationId, 20);
 
     const currentAuthorization = authorizations[0] ?? null;
 
