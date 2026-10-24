@@ -957,7 +957,50 @@ export default function MedicationsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+      <header className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+        <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
+        <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/80">
+              Tratamientos y acceso a medicamentos
+            </p>
+            {selectedMember && (
+              <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+                Medicamentos y trámites de {memberFullName(selectedMember)}
+              </h1>
+            )}
+            <p className="mt-2 text-sm leading-relaxed text-white/80">
+              Organiza tratamientos, registra las tomas y sigue autorizaciones,
+            renovaciones y recogidas desde el mismo lugar.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              className="border-white/30! bg-white/10! text-white! hover:bg-white/20!"
+              onClick={() =>
+              reloadEverything(selectedMedicationId).catch(() => {})
+            }
+            disabled={refreshing || !selectedMemberId}
+          >
+            <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />{" "}
+            Actualizar
+            </Button>
+            {canManageSelected && (
+            <button
+                className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-brand-800 shadow-sm transition hover:bg-brand-50 sm:self-auto"
+              onClick={() => openMedicationForm("create")}
+              disabled={!selectedMemberId}
+            >
+              <Plus size={16} /> Nuevo medicamento
+            </button>
+          )}
+          </div>
+        </div>
+      </header>
+
+      {/* <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">
             Tratamientos y acceso a medicamentos
@@ -990,12 +1033,12 @@ export default function MedicationsPage() {
             </Button>
           )}
         </div>
-      </header>
+      </header> */}
 
       <section className="surface-card grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
         <label className="block">
           <span className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
-            Familia o espacio
+            Familia
           </span>
           <div className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
             <UsersRound size={16} className="text-brand-600" />
@@ -1012,11 +1055,9 @@ export default function MedicationsPage() {
             onChange={(event) => setSelectedMemberId(event.target.value)}
             disabled={loadingMembers || members.length === 0}
           >
-            <option value="">
-              {loadingMembers
-                ? "Cargando perfiles…"
-                : "No hay perfiles activos"}
-            </option>
+            {members.length === 0 && (
+              <option value="">No hay perfiles activos</option>
+            )}
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {memberFullName(member)}
@@ -1025,31 +1066,6 @@ export default function MedicationsPage() {
           </Select>
         </label>
       </section>
-
-      {selectedMember && (
-        <section className="flex flex-col gap-3 rounded-2xl border border-brand-100 bg-brand-50/70 p-4 dark:border-brand-900/70 dark:bg-brand-950/25 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-700 shadow-sm dark:bg-slate-900 dark:text-brand-200">
-              <ShieldCheck size={19} />
-            </span>
-            <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-white">
-                Tratamientos de {memberFullName(selectedMember)}
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                {canManageSelected
-                  ? "Puedes gestionar la información de este perfil según tus permisos."
-                  : "Tienes permiso de consulta para este perfil."}
-              </p>
-            </div>
-          </div>
-          {!canManageSelected && (
-            <span className="rounded-lg bg-slate-100 px-3 py-2 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-              Solo lectura
-            </span>
-          )}
-        </section>
-      )}
 
       <InlineError message={error} onClose={clearError} />
 
@@ -1099,18 +1115,13 @@ export default function MedicationsPage() {
       </section>
 
       <section className="space-y-4">
-        <SectionHeading
-          eyebrow="Tu lista de tratamientos"
-          title="Medicamentos"
-          description="Selecciona un medicamento para consultar sus horarios, tomas y proceso de entrega."
-          action={
-            medications.length > 0 && canManageSelected ? (
-              <Button onClick={() => openMedicationForm("create")}>
-                <Plus size={15} /> Agregar
-              </Button>
-            ) : null
-          }
-        />
+        <div>
+          {!canManageSelected && selectedMember && (
+            <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+              Solo lectura
+            </span>
+          )}
+        </div>
         {loadingMembers || loadingMedications ? (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {[0, 1, 2].map((item) => (

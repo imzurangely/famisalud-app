@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Activity,
   ArrowRight,
   ArrowUpRight,
-  BellRing,
   CalendarCheck,
   CalendarClock,
   CheckCircle2,
@@ -31,13 +30,9 @@ import {
   updateMedicationLog,
   collectMedicationDelivery,
   markDeliveryPendingPharmacy,
+  confirmDeliveryRenewalManaged,
 } from "../../medications/services/medicationsService.js";
 import { updateAppointment } from "../../appointments/services/appointmentsService.js";
-import { useNotificationsSummary } from "../../notifications/context/NotificationsContext.jsx";
-import {
-  getNotificationDestination,
-  notificationIsUnread,
-} from "../../notifications/utils/notificationUtils.js";
 import { loadDashboardData } from "../services/dashboardService.js";
 import DashboardActionModal from "../components/DashboardActionModal.jsx";
 import {
@@ -289,7 +284,7 @@ function DoseRow({ task, familyId, canManage, onTake }) {
   );
 }
 
-function DeliveryRow({
+function DeliveryAttentionRow({
   item,
   familyId,
   canManage,
@@ -301,70 +296,161 @@ function DeliveryRow({
   const status = getDeliveryStatus(delivery);
   const scheduledDate = fieldValue(delivery, "scheduledDate", "scheduled_date");
   const isReady = status === "LISTO_PARA_RECOGER";
+  const isPendingPharmacy = status === "PENDIENTE_FARMACIA";
   const canCollect =
-    ["LISTO_PARA_RECOGER", "PENDIENTE_FARMACIA"].includes(status) &&
-    isDateReached(scheduledDate);
+    (isReady || isPendingPharmacy) && isDateReached(scheduledDate);
   const path = buildDashboardDestinations(member, familyId, medication, {
     tab: "tramites",
     deliveryId: delivery.id,
   });
+  const statusLabel = isPendingPharmacy
+    ? "Pendiente en farmacia"
+    : "Lista para recoger";
+
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-slate-100 p-3.5 dark:border-slate-800 sm:flex-row sm:items-center">
-      <span
-        className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${isReady ? CARD_TONES.emerald : CARD_TONES.amber}`}
-      >
-        <PackageCheck size={17} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-extrabold text-slate-800 dark:text-slate-100">
-          {fieldValue(medication, "name")}
-        </p>
-        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-          {memberName(member)} ·{" "}
-          {status === "PENDIENTE_FARMACIA"
-            ? "Pendiente por disponibilidad de farmacia"
-            : `Recogida programada: ${formatDashboardDate(scheduledDate)}`}
-        </p>
-        {fieldValue(delivery, "pharmacyName", "pharmacy_name") && (
-          <p className="mt-1 truncate text-[10px] text-slate-400">
-            {fieldValue(delivery, "pharmacyName", "pharmacy_name")}
-          </p>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2 sm:justify-end">
-        <Link
-          to={path}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-600 transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
+    <article className="rounded-2xl border border-slate-100 p-3.5 dark:border-slate-800">
+      <div className="flex items-start gap-3">
+        <span
+          className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${isReady ? CARD_TONES.emerald : CARD_TONES.amber}`}
         >
-          Ver trámite
+          <PackageCheck size={17} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="min-w-0 flex-1 truncate text-xs font-extrabold text-slate-800 dark:text-slate-100">
+              {fieldValue(medication, "name") || "Medicamento"}
+            </p>
+            <span
+              className={`rounded-full px-2 py-1 text-[9px] font-bold ${isReady ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200" : "bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200"}`}
+            >
+              {statusLabel}
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            Para {memberName(member)}
+          </p>
+          <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+            {isPendingPharmacy
+              ? "La farmacia aún no tiene el medicamento disponible."
+              : `Fecha de recogida: ${formatDashboardDate(scheduledDate)}`}
+          </p>
+          {fieldValue(delivery, "pharmacyName", "pharmacy_name") && (
+            <p className="mt-1 truncate text-[10px] text-slate-400">
+              {fieldValue(delivery, "pharmacyName", "pharmacy_name")}
+            </p>
+          )}
+        </div>
+        <Link
+          aria-label={`Ver trámite de ${fieldValue(medication, "name") || "medicamento"}`}
+          to={path}
+          className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold text-brand-700 hover:underline dark:text-brand-300"
+        >
+          Ver <ArrowUpRight size={12} />
         </Link>
-        {canManage && isReady && (
-          <Button
-            variant="secondary"
-            className="min-h-9 px-3 py-2 text-[10px]"
-            disabled={busy}
-            onClick={() => onPending(item)}
-          >
-            <Clock3 size={13} /> Marcar pendiente
-          </Button>
-        )}
-        {canManage && canCollect && (
-          <Button
-            className="min-h-9 px-3 py-2 text-[10px]"
-            disabled={busy}
-            onClick={() => onCollect(item)}
-          >
-            <PackageCheck size={13} /> Registrar recogida
-          </Button>
-        )}
       </div>
+      {canManage && (
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+          {isReady && canCollect && (
+            <Button
+              variant="secondary"
+              className="min-h-9 px-3 py-2 text-[10px]"
+              disabled={busy}
+              onClick={() => onPending(item)}
+            >
+              <Clock3 size={13} /> Marcar pendiente
+            </Button>
+          )}
+          {canCollect ? (
+            <Button
+              className="min-h-9 px-3 py-2 text-[10px]"
+              disabled={busy}
+              onClick={() => onCollect(item)}
+            >
+              <PackageCheck size={13} /> Marcar recogido
+            </Button>
+          ) : (
+            <span className="text-[10px] font-medium text-slate-400">
+              Disponible desde {formatDashboardDate(scheduledDate)}
+            </span>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function RenewalAttentionRow({
+  item,
+  familyId,
+  canManage,
+  onConfirmRenewal,
+  busy = false,
+}) {
+  const { member, medication, delivery } = item;
+  const path = buildDashboardDestinations(member, familyId, medication, {
+    tab: "tramites",
+    deliveryId: delivery?.id,
+  });
+  return (
+    <article className="rounded-2xl border border-rose-100 bg-rose-50/40 p-3.5 dark:border-rose-950 dark:bg-rose-950/10">
+      <div className="flex items-start gap-3">
+        <span
+          className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${CARD_TONES.rose}`}
+        >
+          <RefreshCw size={17} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="min-w-0 flex-1 truncate text-xs font-extrabold text-slate-800 dark:text-slate-100">
+              {fieldValue(medication, "name") || "Medicamento"}
+            </p>
+            <span className="rounded-full bg-rose-100 px-2 py-1 text-[9px] font-bold text-rose-700 dark:bg-rose-950/70 dark:text-rose-200">
+              Renovación pendiente
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            Tratamiento de {memberName(member)}.
+          </p>
+          <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+            Confirma la renovación cuando ya hayas realizado la gestión.
+          </p>
+        </div>
+        <Link
+          aria-label={`Ver renovación de ${fieldValue(medication, "name") || "medicamento"}`}
+          to={path}
+          className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold text-brand-700 hover:underline dark:text-brand-300"
+        >
+          Ver <ArrowUpRight size={12} />
+        </Link>
+      </div>
+      {canManage && (
+        <div className="mt-3 flex justify-end border-t border-rose-100 pt-3 dark:border-rose-950">
+          {delivery?.id ? (
+            <Button
+              className="min-h-9 px-3 py-2 text-[10px]"
+              disabled={busy}
+              onClick={() => onConfirmRenewal(item)}
+            >
+              <CheckCircle2 size={13} /> Ya renové
+            </Button>
+          ) : (
+            <Link
+              to={path}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-[10px] font-bold text-rose-800 hover:bg-rose-50 dark:border-rose-900 dark:bg-slate-950 dark:text-rose-200"
+            >
+              <RefreshCw size={13} /> Gestionar renovación
+            </Link>
+          )}
+        </div>
+      )}
     </article>
   );
 }
 
 function WeeklyAdherenceChart({ stats }) {
+  const maxRecorded = Math.max(...stats.days.map((day) => day.recorded), 1);
   return (
-    <section className="surface-card h-fit self-start p-5 sm:p-6">
+    <section className="surface-card flex h-full min-h-105 flex-col p-5 sm:p-6 xl:h-115 xl:min-h-115">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-brand-700 dark:text-brand-300">
@@ -377,7 +463,7 @@ function WeeklyAdherenceChart({ stats }) {
             Solo incluye tomas con un resultado registrado.
           </p>
         </div>
-        <div className="rounded-2xl bg-brand-50 px-3 py-2 text-right dark:bg-brand-950/40">
+        <div className="shrink-0 rounded-2xl bg-brand-50 px-3 py-2 text-right dark:bg-brand-950/40">
           <p className="font-display text-2xl font-extrabold text-brand-700 dark:text-brand-200">
             {stats.percent === null ? "—" : `${stats.percent}%`}
           </p>
@@ -387,28 +473,29 @@ function WeeklyAdherenceChart({ stats }) {
         </div>
       </div>
       {stats.recorded === 0 ? (
-        <div className="mt-5 rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center dark:border-slate-800">
+        <div className="mt-5 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center dark:border-slate-800">
           <Activity className="mx-auto text-slate-300" size={26} />
           <p className="mt-2 text-xs font-bold text-slate-600 dark:text-slate-300">
             Aún no hay datos para la gráfica
           </p>
-          <p className="mt-1 text-[11px] text-slate-400">
+          <p className="mt-1 max-w-xs text-[11px] text-slate-400">
             Cuando se registren tomas, verás el seguimiento de la semana aquí.
           </p>
         </div>
       ) : (
-        <div className="mt-5 flex h-44 items-end gap-2 sm:gap-3">
+        <div className="mt-5 flex min-h-52.5 flex-1 items-stretch gap-2 sm:gap-3">
           {stats.days.map((day) => (
             <div
               key={day.key}
-              className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"
+              className="flex min-w-0 flex-1 flex-col items-center gap-2"
             >
-              <div className="flex h-32 w-full items-end justify-center rounded-t-lg bg-slate-50 px-1 dark:bg-slate-900">
+              <div className="flex min-h-42.5 w-full flex-1 items-end justify-center rounded-t-lg bg-slate-50 px-1 dark:bg-slate-900">
                 {day.recorded > 0 && (
                   <div
-                    className="relative flex w-full max-w-8 items-end justify-center overflow-hidden rounded-t-md bg-brand-100 dark:bg-brand-950"
+                    className="relative flex w-full max-w-9 items-end justify-center overflow-hidden rounded-t-md bg-brand-100 dark:bg-brand-950"
                     style={{
-                      height: `${Math.max(10, (day.recorded / Math.max(...stats.days.map((entry) => entry.recorded), 1)) * 100)}%`,
+                      height: `${Math.max(10, (day.recorded / maxRecorded) * 100)}%`,
+                      minHeight: "12%",
                     }}
                   >
                     <div
@@ -428,7 +515,7 @@ function WeeklyAdherenceChart({ stats }) {
           ))}
         </div>
       )}
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-slate-500 dark:text-slate-400">
+      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-4 text-[10px] text-slate-500 dark:text-slate-400">
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2 rounded-sm bg-brand-500" />
           Tomadas o retrasadas
@@ -445,60 +532,66 @@ function WeeklyAdherenceChart({ stats }) {
   );
 }
 
-function RecentNotices({ notices, onOpen }) {
+function MedicationProcessesCard({
+  deliveries,
+  renewals,
+  familyId,
+  canManage,
+  onCollect,
+  onPending,
+  onConfirmRenewal,
+  busy,
+}) {
+  const rows = [
+    ...deliveries.map((item) => ({ ...item, rowType: "delivery" })),
+    ...renewals.map((item) => ({ ...item, rowType: "renewal" })),
+  ];
   return (
-    <section className="surface-card p-5 sm:p-6">
+    <section className="surface-card flex h-full min-h-105 flex-col overflow-hidden p-5 sm:p-6 xl:h-115 xl:min-h-115">
       <SectionHeading
         eyebrow="Para tener presente"
-        title="Avisos recientes"
-        action="Ver todas"
-        to="/notificaciones"
+        title="Trámites por resolver"
+        action="Gestionar trámites"
+        to="/medicamentos?tab=tramites"
       />
-      {notices.length === 0 ? (
-        <div className="rounded-xl bg-slate-50 px-4 py-6 text-center dark:bg-slate-900">
-          <BellRing className="mx-auto text-slate-300" size={22} />
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            No tienes avisos recientes.
+      <p className="-mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+        Recogidas listas y renovaciones que necesitan una acción.
+      </p>
+      {rows.length === 0 ? (
+        <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center dark:border-slate-800">
+          <PackageCheck className="text-slate-300" size={26} />
+          <p className="mt-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+            No tienes trámites pendientes
+          </p>
+          <p className="mt-1 max-w-xs text-[11px] text-slate-400">
+            Aquí aparecerán los medicamentos listos para recoger y los que
+            necesiten renovar su trámite.
           </p>
         </div>
       ) : (
-        <div className="space-y-1">
-          {notices.slice(0, 4).map((notice) => (
-            <button
-              type="button"
-              key={notice.id}
-              onClick={() => onOpen(notice)}
-              className="flex w-full items-start gap-3 rounded-xl px-2 py-3 text-left transition hover:bg-slate-50 dark:hover:bg-slate-900"
-            >
-              <span
-                className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg ${notificationIsUnread(notice) ? CARD_TONES.teal : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}
-              >
-                <BellRing size={15} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span
-                  className={`block text-xs leading-relaxed ${notificationIsUnread(notice) ? "font-extrabold text-slate-900 dark:text-white" : "font-semibold text-slate-700 dark:text-slate-300"}`}
-                >
-                  {notice.title || "Aviso de FamiSalud"}
-                </span>
-                {notice.body && (
-                  <span className="mt-1 line-clamp-2 block text-[10px] leading-relaxed text-slate-500 dark:text-slate-400">
-                    {notice.body}
-                  </span>
-                )}
-                <span className="mt-1.5 block text-[9px] text-slate-400">
-                  {formatDashboardDate(notice.created_at, {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </span>
-              </span>
-              <ChevronRight
-                size={15}
-                className="mt-1 shrink-0 text-slate-300"
+        <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+          {rows.map((item, index) =>
+            item.rowType === "delivery" ? (
+              <DeliveryAttentionRow
+                key={`delivery-${item.medication.id}-${item.delivery.id}`}
+                item={item}
+                familyId={familyId}
+                canManage={canManage(item.member)}
+                onCollect={onCollect}
+                onPending={onPending}
+                busy={busy}
               />
-            </button>
-          ))}
+            ) : (
+              <RenewalAttentionRow
+                key={`renewal-${item.medication.id}-${item.delivery?.id || index}`}
+                item={item}
+                familyId={familyId}
+                canManage={canManage(item.member)}
+                onConfirmRenewal={onConfirmRenewal}
+                busy={busy}
+              />
+            ),
+          )}
         </div>
       )}
     </section>
@@ -506,7 +599,6 @@ function RecentNotices({ notices, onOpen }) {
 }
 
 export default function DashboardPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const {
     families,
@@ -515,8 +607,7 @@ export default function DashboardPage() {
     loadingFamilies,
     familyError,
   } = useFamilies();
-  const { markRead } = useNotificationsSummary();
-  const [data, setData] = useState({ members: [], notices: [], errors: [] });
+  const [data, setData] = useState({ members: [], errors: [] });
   const [loading, setLoading] = useState(true);
   const [globalError, setGlobalError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -530,7 +621,7 @@ export default function DashboardPage() {
     const familyId = selectedFamilyIdRef.current;
     const requestId = ++requestIdRef.current;
     if (!familyId) {
-      setData({ members: [], notices: [], errors: [] });
+      setData({ members: [], errors: [] });
       setGlobalError("");
       setLoading(false);
       setRefreshing(false);
@@ -539,7 +630,7 @@ export default function DashboardPage() {
     if (quiet) setRefreshing(true);
     else {
       setLoading(true);
-      setData({ members: [], notices: [], errors: [] });
+      setData({ members: [], errors: [] });
     }
     setGlobalError("");
     try {
@@ -704,15 +795,6 @@ export default function DashboardPage() {
   const canManage = (member) =>
     personCanManage(member, selectedFamily, user?.id);
 
-  async function handleNoticeOpen(notice) {
-    try {
-      if (notificationIsUnread(notice)) await markRead(notice.id);
-    } catch {
-      /* La navegación no depende de que el cambio de lectura responda. */
-    }
-    navigate(getNotificationDestination(notice));
-  }
-
   async function handleTake(payload) {
     const target = activeAction?.target;
     if (!target) return;
@@ -769,6 +851,27 @@ export default function DashboardPage() {
       );
       notify.success(
         "La entrega quedó pendiente porque la farmacia no tiene existencias.",
+      );
+      await refreshDashboard({ quiet: true });
+    } catch (error) {
+      notify.error(friendlyErrorMessage(error));
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function handleConfirmRenewal(item) {
+    if (!item?.member?.id || !item?.medication?.id || !item?.delivery?.id)
+      return;
+    setActionBusy(true);
+    try {
+      await confirmDeliveryRenewalManaged(
+        item.member.id,
+        item.medication.id,
+        item.delivery.id,
+      );
+      notify.success(
+        "Renovación confirmada. La entrega quedó lista para recoger.",
       );
       await refreshDashboard({ quiet: true });
     } catch (error) {
@@ -868,7 +971,7 @@ export default function DashboardPage() {
                 size={14}
                 className={refreshing || loading ? "animate-spin" : ""}
               />{" "}
-              Actualizar datos
+              Actualizar
             </Button>
             <Link
               to="/familia"
@@ -877,18 +980,6 @@ export default function DashboardPage() {
               Mi familia <ArrowRight size={14} />
             </Link>
           </div>
-        </div>
-        <div className="relative z-10 mt-6 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-semibold">
-            <ShieldCheck size={13} /> Información según tus permisos
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-semibold">
-            <UsersRound size={13} />
-            {data.members.length}{" "}
-            {data.members.length === 1
-              ? "perfil familiar"
-              : "perfiles familiares"}
-          </span>
         </div>
       </header>
 
@@ -1151,18 +1242,27 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      <div className="grid items-start gap-6 xl:grid-cols-2">
+      <div className="grid items-stretch gap-5 xl:grid-cols-2">
         <WeeklyAdherenceChart stats={weeklyStats} />
-        <RecentNotices notices={data.notices} onOpen={handleNoticeOpen} />
+        <MedicationProcessesCard
+          deliveries={deliveryItems}
+          renewals={renewalItems}
+          familyId={selectedFamilyId}
+          canManage={canManage}
+          onCollect={(target) => setActiveAction({ type: "pickup", target })}
+          onPending={handlePendingPharmacy}
+          onConfirmRenewal={handleConfirmRenewal}
+          busy={actionBusy}
+        />
       </div>
 
-      {(pendingAttendance.length > 0 ||
-        deliveryItems.length > 0 ||
-        renewalItems.length > 0) && (
+      {pendingAttendance.length > 0 && (
         <section className="surface-card p-5 sm:p-6">
           <SectionHeading
-            eyebrow="Prioridades"
-            title="Pendientes que puedes resolver"
+            eyebrow="Seguimiento"
+            title="Citas pendientes de registrar"
+            action="Ver citas"
+            to="/citas"
           />
           <div className="space-y-3">
             {pendingAttendance.slice(0, 3).map((item) => (
@@ -1176,51 +1276,6 @@ export default function DashboardPage() {
                 onCancel={(target) =>
                   setActiveAction({ type: "cancel-appointment", target })
                 }
-              />
-            ))}
-            {renewalItems.slice(0, 3).map((item, index) => (
-              <article
-                key={`renewal-${item.medication.id}-${item.delivery?.id || index}`}
-                className="flex flex-col gap-3 rounded-2xl border border-amber-100 bg-amber-50/40 p-3.5 dark:border-amber-950 dark:bg-amber-950/10 sm:flex-row sm:items-center"
-              >
-                <span
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${CARD_TONES.amber}`}
-                >
-                  <RefreshCw size={17} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-extrabold text-slate-800 dark:text-slate-100">
-                    Renovar {fieldValue(item.medication, "name")}
-                  </p>
-                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                    Tratamiento de {memberName(item.member)}. Revisa el trámite
-                    para mantener las próximas entregas al día.
-                  </p>
-                </div>
-                <Link
-                  to={buildDashboardDestinations(
-                    item.member,
-                    selectedFamilyId,
-                    item.medication,
-                    { tab: "tramites", deliveryId: item.delivery?.id },
-                  )}
-                  className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-white px-3 py-2 text-[10px] font-bold text-amber-800 hover:bg-amber-50 dark:border-amber-900 dark:bg-slate-950 dark:text-amber-200"
-                >
-                  <RefreshCw size={13} /> Gestionar renovación
-                </Link>
-              </article>
-            ))}
-            {deliveryItems.slice(0, 4).map((item) => (
-              <DeliveryRow
-                key={`${item.medication.id}-${item.delivery.id}`}
-                item={item}
-                familyId={selectedFamilyId}
-                canManage={canManage(item.member)}
-                onCollect={(target) =>
-                  setActiveAction({ type: "pickup", target })
-                }
-                onPending={handlePendingPharmacy}
-                busy={actionBusy}
               />
             ))}
           </div>

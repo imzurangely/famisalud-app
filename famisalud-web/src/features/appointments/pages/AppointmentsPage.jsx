@@ -182,7 +182,50 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+        <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
+        <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/80">
+              Agenda de salud
+            </p>
+            {selectedMember && (
+              <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+                Citas médicas de {memberFullName(selectedMember)}
+              </h1>
+            )}
+            <p className="mt-2 text-sm leading-relaxed text-white/80">
+              Programa citas, consulta los detalles y accede a los documentos
+              vinculados a cada consulta.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              className="border-white/30! bg-white/10! text-white! hover:bg-white/20!"
+              onClick={() => reloadAppointments().catch(() => {})}
+              disabled={loadingAppointments || !selectedMemberId}
+            >
+              <RefreshCw
+                size={15}
+                className={loadingAppointments ? "animate-spin" : ""}
+              />{" "}
+              Actualizar
+            </Button>
+            {canManageSelected && (
+              <button
+                className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-brand-800 shadow-sm transition hover:bg-brand-50 sm:self-auto"
+                onClick={openCreate}
+              >
+                <Plus size={16} /> Nueva cita
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">
             Agenda de salud
@@ -213,24 +256,27 @@ export default function AppointmentsPage() {
             </Button>
           )}
         </div>
-      </header>
+      </header> */}
 
-      <section className="surface-card grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:p-5">
+      <section className="surface-card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 sm:p-5 items-center">
         <label className="block">
           <span className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
             Familia o espacio
           </span>
           <div className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-            <UsersRound size={16} className="text-brand-600" />
-            {selectedFamily?.name || "Selecciona una familia"}
+            <UsersRound size={16} className="text-brand-600 shrink-0" />
+            <span className="truncate">
+              {selectedFamily?.name || "Selecciona una familia"}
+            </span>
           </div>
         </label>
+
         <label className="block">
           <span className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
             Perfil clínico
           </span>
           <Select
-            className="form-input"
+            className="form-input w-full"
             value={selectedMemberId}
             onChange={(event) => setSelectedMemberId(event.target.value)}
             disabled={loadingMembers || members.length === 0}
@@ -245,48 +291,13 @@ export default function AppointmentsPage() {
             ))}
           </Select>
         </label>
-      </section>
 
-      {selectedMember && (
-        <section className="flex flex-col gap-3 rounded-2xl border border-brand-100 bg-brand-50/70 p-4 dark:border-brand-900/70 dark:bg-brand-950/25 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-700 shadow-sm dark:bg-slate-900 dark:text-brand-200">
-              <ShieldCheck size={19} />
-            </span>
-            <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-white">
-                Agenda de {memberFullName(selectedMember)}
-              </p>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                {canManageSelected
-                  ? "Puedes gestionar las citas de este perfil según tus permisos."
-                  : "Tienes permiso de consulta para las citas de este perfil."}
-              </p>
-            </div>
-          </div>
-          {!canManageSelected && (
-            <span className="rounded-lg bg-slate-100 px-3 py-2 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-              Solo lectura
-            </span>
-          )}
-        </section>
-      )}
-
-      <InlineError message={error} onClose={clearError} />
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
-            Agenda
-          </h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {appointments.length} {appointments.length === 1 ? "cita" : "citas"}
-          </p>
-        </div>
-        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-          <span>Filtrar estado</span>
+        <label className="block sm:col-span-2 lg:col-span-1">
+          <span className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Filtrar estado
+          </span>
           <Select
-            className="form-input min-w-44 py-2"
+            className="form-input w-full py-2"
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           >
@@ -298,6 +309,18 @@ export default function AppointmentsPage() {
             ))}
           </Select>
         </label>
+      </section>
+
+      <InlineError message={error} onClose={clearError} />
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          {!canManageSelected && selectedMember && (
+            <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+              Solo lectura
+            </span>
+          )}
+        </div>
       </div>
 
       {loadingMembers || loadingAppointments ? (

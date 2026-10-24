@@ -31,7 +31,9 @@ export default function Sidebar({ open, onClose }) {
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-69 flex-col border-r border-slate-200/80 bg-white transition-transform duration-300 dark:border-slate-800 dark:bg-slate-950 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-69 flex-col border-r border-slate-200/80 bg-white transition-transform duration-300 dark:border-slate-800 dark:bg-slate-950 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
         <div className="flex h-20.5 items-center justify-between border-b border-slate-100 px-6 dark:border-slate-800">
           <NavLink to="/" onClick={onClose} className="flex items-center gap-3">
@@ -83,13 +85,6 @@ export default function Sidebar({ open, onClose }) {
                 }
                 buttonClassName="min-h-[66px] rounded-2xl border-slate-200 bg-slate-50 px-3 py-3 shadow-none hover:bg-brand-50/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-900"
               />
-              <Link
-                to="/familia"
-                onClick={onClose}
-                className="flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-brand-700 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-brand-300"
-              >
-                <Plus size={13} /> Gestionar familias
-              </Link>
             </div>
           ) : (
             <Link
@@ -141,20 +136,6 @@ export default function Sidebar({ open, onClose }) {
               </NavLink>
             ))}
           </div>
-
-          <p className="mb-3 mt-8 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-            Accesos rápidos
-          </p>
-          <NavLink
-            to="/historia-clinica"
-            onClick={onClose}
-            className="group flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100"
-          >
-            <span className="flex size-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-300">
-              <Plus size={18} />
-            </span>
-            Registrar información
-          </NavLink>
         </nav>
       </aside>
     </>

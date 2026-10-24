@@ -58,7 +58,6 @@ export default function MedicalHistoryPage() {
       HISTORY_SECTIONS[0],
     [section],
   );
-  const ActiveIcon = currentSection.icon;
 
   function openCreate() {
     setModalMode("create");
@@ -133,32 +132,83 @@ export default function MedicalHistoryPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+        <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
+        <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/80">
+              Información de salud
+            </p>
+            {selectedMember && (
+              <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+                Historia clínica de {memberName(selectedMember)}
+              </h1>
+            )}
+            <p className="mt-2 text-sm leading-relaxed text-white/80">
+              Consulta y registra información clínica como alergias, vacunas, condiciones y signos vitales
+              de las personas a las que tienes acceso
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              className="border-white/30! bg-white/10! text-white! hover:bg-white/20!"
+              onClick={() => reloadRecords().catch(() => {})}
+              disabled={loadingRecords || !selectedMemberId}
+            >
+              <RefreshCw
+                size={15}
+                className={loadingRecords ? "animate-spin" : ""}
+              />{" "}
+              Actualizar
+            </Button>
+            {canManageSelected && (
+              <button
+                className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-brand-800 shadow-sm transition hover:bg-brand-50 sm:self-auto"
+                onClick={openCreate}
+              >
+                <Plus size={16} /> Agregar registro
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+      {/* <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">
             Información de salud
           </p>
-          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Historia clínica
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-            Consulta y registra información clínica de las personas a las que
-            tienes acceso. La historia se comparte entre perfiles de la misma
-            persona.
+          {selectedMember && (
+            <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              Historia clínica de {memberName(selectedMember)}
+            </h1>
+          )}
+          <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            {canManageSelected
+              ? "Puedes gestionar los registros de este perfil según tus permisos."
+              : "Tienes permiso de consulta para este perfil."}
           </p>
         </div>
-        <Button
-          variant="secondary"
-          onClick={() => reloadRecords().catch(() => {})}
-          disabled={loadingRecords || !selectedMemberId}
-        >
-          <RefreshCw
-            size={15}
-            className={loadingRecords ? "animate-spin" : ""}
-          />{" "}
-          Actualizar
-        </Button>
-      </header>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => reloadRecords().catch(() => {})}
+            disabled={loadingRecords || !selectedMemberId}
+          >
+            <RefreshCw
+              size={15}
+              className={loadingRecords ? "animate-spin" : ""}
+            />{" "}
+            Actualizar
+          </Button>
+          {canManageSelected && (
+            <Button onClick={openCreate}>
+              <Plus size={16} /> Agregar registro
+            </Button>
+          )}
+        </div>
+      </header> */}
 
       {familyNotSelected && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
@@ -169,7 +219,7 @@ export default function MedicalHistoryPage() {
       <section className="surface-card grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:p-5">
         <label className="block">
           <span className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300">
-            Familia o espacio
+            Familia
           </span>
           <div className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
             <UsersRound size={16} className="text-brand-600" />
@@ -200,31 +250,6 @@ export default function MedicalHistoryPage() {
           </Select>
         </label>
       </section>
-
-      {selectedMember && (
-        <section className="flex flex-col gap-3 rounded-2xl border border-brand-100 bg-brand-50/70 p-4 dark:border-brand-900/70 dark:bg-brand-950/25 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-700 shadow-sm dark:bg-slate-900 dark:text-brand-200">
-              <ShieldCheck size={19} />
-            </span>
-            <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-white">
-                Historia de {memberName(selectedMember)}
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                {canManageSelected
-                  ? "Puedes gestionar los registros de este perfil según tus permisos."
-                  : "Tienes permiso de consulta para este perfil."}
-              </p>
-            </div>
-          </div>
-          {canManageSelected && (
-            <Button onClick={openCreate}>
-              <Plus size={16} /> Agregar registro
-            </Button>
-          )}
-        </section>
-      )}
 
       <section className="space-y-4">
         <div className="flex gap-2 overflow-x-auto pb-1">

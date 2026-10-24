@@ -113,19 +113,12 @@ export default function Topbar({ onMenuClick }) {
       <div className="flex h-19.5 items-center gap-3 px-4 sm:px-6 lg:px-9">
         <button
           onClick={onMenuClick}
-          className="icon-button lg:hidden"
+          className="icon-button"
           aria-label="Abrir menú"
         >
           <Menu size={21} />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-[11px] font-medium text-slate-400">
-            <span>FamiSalud</span>
-            <span className="text-slate-300 dark:text-slate-700">/</span>
-            <span className="truncate text-slate-500 dark:text-slate-300">
-              {pageTitle}
-            </span>
-          </div>
           <h1 className="mt-1 truncate font-display text-[19px] font-bold tracking-tight text-slate-900 dark:text-white sm:text-[21px]">
             {pageTitle}
           </h1>

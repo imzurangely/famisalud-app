@@ -181,7 +181,50 @@ export default function DocumentsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+        <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
+        <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/80">
+              Archivos clínicos
+            </p>
+            {selectedMember && (
+              <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+                Documentos de {memberFullName(selectedMember)}
+              </h1>
+            )}
+            <p className="mt-2 text-sm leading-relaxed text-white/80">
+              Guarda y consulta resultados, órdenes médicas e información
+              clínica, con opción de vincularlos a una cita.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              className="border-white/30! bg-white/10! text-white! hover:bg-white/20!"
+              onClick={() => reloadDocuments().catch(() => {})}
+              disabled={loadingDocuments || !selectedMemberId}
+            >
+              <RefreshCw
+                size={15}
+                className={loadingDocuments ? "animate-spin" : ""}
+              />{" "}
+              Actualizar
+            </Button>
+            {canManageSelected && (
+              <button
+                className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-brand-800 shadow-sm transition hover:bg-brand-50 sm:self-auto"
+                onClick={openCreate}
+              >
+                <Plus size={16} /> Subir documento
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">
             Archivos clínicos
@@ -212,7 +255,7 @@ export default function DocumentsPage() {
             </Button>
           )}
         </div>
-      </header>
+      </header> */}
 
       <section className="surface-card grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:p-5">
         <label className="block">
@@ -245,31 +288,6 @@ export default function DocumentsPage() {
           </Select>
         </label>
       </section>
-
-      {selectedMember && (
-        <section className="flex flex-col gap-3 rounded-2xl border border-brand-100 bg-brand-50/70 p-4 dark:border-brand-900/70 dark:bg-brand-950/25 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-700 shadow-sm dark:bg-slate-900 dark:text-brand-200">
-              <ShieldCheck size={19} />
-            </span>
-            <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-white">
-                Documentos de {memberFullName(selectedMember)}
-              </p>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                {canManageSelected
-                  ? "Puedes gestionar documentos para este perfil según tus permisos."
-                  : "Tienes permiso de consulta para los documentos de este perfil."}
-              </p>
-            </div>
-          </div>
-          {!canManageSelected && (
-            <span className="rounded-lg bg-slate-100 px-3 py-2 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-              Solo lectura
-            </span>
-          )}
-        </section>
-      )}
 
       <InlineError message={error} onClose={clearError} />
 
@@ -340,13 +358,11 @@ export default function DocumentsPage() {
       )}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
-            Archivos del perfil
-          </h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {documents.length}{" "}
-            {documents.length === 1 ? "documento" : "documentos"}
-          </p>
+          {!canManageSelected && selectedMember && (
+            <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+              Solo lectura
+            </span>
+          )}
         </div>
         {initialAppointmentId && (
           <button

@@ -568,8 +568,31 @@ export default function ProfilePage() {
     );
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-6">
+      <header className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+        <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
+        <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/80">
+              Tu cuenta FamiSalud
+            </p>
+            <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+              Mi perfil
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/80">
+              Tus datos personales viven en una identidad global. Si perteneces a
+            varias familias, los cambios de identidad se reflejan en los
+            perfiles que representan a la misma persona.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+          <Mail size={15} /> {user.email}
+        </div>
+        </div>
+      </header>
+
+      {/* <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">
             Tu cuenta FamiSalud
@@ -586,7 +609,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 dark:bg-slate-900 dark:text-slate-300">
           <Mail size={15} /> {user.email}
         </div>
-      </header>
+      </header> */}
 
       <section className="surface-card p-5 sm:p-6">
         <SectionHeader

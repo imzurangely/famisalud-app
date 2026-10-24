@@ -6,7 +6,6 @@ import {
   listMedications,
   listSchedules,
 } from "../../medications/services/medicationsService.js";
-import { listNotifications } from "../../notifications/services/notificationsService.js";
 
 function startOfLocalDay(date) {
   const result = new Date(date);
@@ -76,7 +75,7 @@ async function loadMemberData(member, windows) {
 
 /** Carga datos reales de la familia activa; los fallos parciales no ocultan los módulos que sí respondieron. */
 export async function loadDashboardData(familyId, referenceDate = new Date()) {
-  if (!familyId) return { members: [], notices: [], errors: [] };
+  if (!familyId) return { members: [], errors: [] };
 
   const members = await listFamilyMembers(familyId);
   const todayStart = startOfLocalDay(referenceDate);
@@ -92,20 +91,13 @@ export async function loadDashboardData(familyId, referenceDate = new Date()) {
     logsTo: tomorrow.toISOString(),
   };
 
-  const [memberResults, noticesResult] = await Promise.all([
-    Promise.all(members.map((member) => loadMemberData(member, windows))),
-    listNotifications({ limit: 5 })
-      .then((result) => result.items)
-      .catch(() => null),
-  ]);
-
+  const memberResults = await Promise.all(
+    members.map((member) => loadMemberData(member, windows)),
+  );
   const errors = memberResults.flatMap((item) => item.errors);
-  if (noticesResult === null)
-    errors.push("No se pudieron cargar los avisos recientes.");
 
   return {
     members: memberResults,
-    notices: noticesResult || [],
     errors: [...new Set(errors)],
   };
 }

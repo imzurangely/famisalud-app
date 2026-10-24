@@ -142,8 +142,49 @@ export default function NotificationsPage() {
   const filteredUnreadCount = notifications.filter(notificationIsUnread).length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-6">
+      <header className="relative overflow-hidden rounded-3xl bg-linear-to-br from-[#176d79] via-brand-500 to-[#4c82a6] p-6 text-white shadow-lg shadow-brand-900/10 sm:p-8">
+        <div className="absolute -right-20 -top-28 size-72 rounded-full border-42 border-white/8" />
+        <div className="absolute -bottom-28 right-24 size-48 rounded-full border-28 border-white/[0.07]" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/80">
+              Avisos de tu cuenta
+            </p>
+            <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">
+              Notificaciones
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/80">
+              Consulta recordatorios de medicamentos y citas, invitaciones
+              familiares y novedades de los trámites. Los avisos corresponden a
+              tu cuenta autenticada.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              className="border-white/30! bg-white/10! text-white! hover:bg-white/20!"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />{" "}
+              Actualizar
+            </Button>
+            {unreadCount > 0 && (
+              <button
+                className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-brand-800 shadow-sm transition hover:bg-brand-50 sm:self-auto"
+                onClick={handleMarkAllRead}
+                disabled={markingAll || loading}
+              >
+                <CheckCheck size={16} />{" "}
+                {markingAll ? "Actualizando…" : "Marcar todas leídas"}
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">
             Avisos de tu cuenta
@@ -176,25 +217,7 @@ export default function NotificationsPage() {
             </Button>
           )}
         </div>
-      </header>
-
-      <section className="flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50/80 p-4 dark:border-sky-900/60 dark:bg-sky-950/20">
-        <Info
-          size={18}
-          className="mt-0.5 shrink-0 text-sky-700 dark:text-sky-300"
-        />
-        <div>
-          <p className="text-xs font-bold text-sky-900 dark:text-sky-200">
-            Centro de avisos dentro de FamiSalud
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-sky-800/80 dark:text-sky-200/80">
-            Los avisos se consultan aquí y en el menú superior. Las
-            notificaciones push del navegador no están activadas: requieren
-            configurar una suscripción web y un servicio de envío; registrar un
-            dispositivo por sí solo no las habilita.
-          </p>
-        </div>
-      </section>
+      </header> */}
 
       <section className="surface-card space-y-4 p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
