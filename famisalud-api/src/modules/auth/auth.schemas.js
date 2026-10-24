@@ -57,43 +57,29 @@ export const sessionParamsSchema = z.object({
 
 const genderSchema = z.enum(['MASCULINO', 'FEMENINO', 'NO_BINARIO', 'OTRO', 'PREFIERO_NO_DECIR']);
 const bloodTypeSchema = z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']);
-const profileDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe tener formato YYYY-MM-DD.')
-  .refine((value) => {
-    const [year, month, day] = value.split('-').map(Number);
-    const date = new Date(Date.UTC(year, month - 1, day));
-    return date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month && date.getUTCDate() === day;
-  }, 'La fecha indicada no existe.');
+const nullableText = (max) => z.string().trim().max(max).nullable().optional();
+const nullableDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional();
 
-export const updateOwnProfileSchema = z.object({
-  firstName: z.string().trim().min(1).max(100).optional(),
-  lastName: z.string().trim().min(1).max(100).optional(),
-  birthDate: profileDateSchema.nullable().optional(),
+export const ownProfileSchema = z.object({
+  firstName: z.string().trim().min(1).max(100),
+  lastName: z.string().trim().min(1).max(100),
+  birthDate: nullableDate,
   gender: genderSchema.nullable().optional(),
-  customGender: z.string().trim().max(100).nullable().optional(),
+  customGender: nullableText(100),
   bloodType: bloodTypeSchema.nullable().optional(),
-  phone: z.string().trim().max(30).nullable().optional(),
-  sisben: z.string().trim().max(20).nullable().optional(),
-  stratum: z.number().int().min(1).max(6).nullable().optional(),
-  avatarUrl: z.string().url().nullable().optional()
-}).strict().refine((data) => Object.keys(data).length > 0, {
-  message: 'Debes enviar al menos un dato para actualizar.'
+  phone: nullableText(30),
+  sisben: nullableText(20),
+  stratum: z.number().int().min(1).max(6).nullable().optional()
+}).strict().superRefine((data, ctx) => {
+  if (data.gender === 'OTRO' && !data.customGender?.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['customGender'], message: 'Especifica tu género.' });
+  }
+  if (data.gender !== 'OTRO' && data.customGender) {
+    ctx.addIssue({ code: 'custom', path: ['customGender'], message: 'Solo indica un género personalizado si seleccionas Otro.' });
+  }
 });
 
-export const updatePreferencesSchema = z.object({
-  timezone: z.string().trim().min(1).max(50).optional(),
-  locale: z.enum(['es-CO', 'es', 'en-US', 'en']).optional()
-}).strict().refine((data) => Object.keys(data).length > 0, {
-  message: 'Debes enviar al menos una preferencia para actualizar.'
-});
-
-export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1).max(128),
-  newPassword: passwordSchema,
-  confirmPassword: z.string().min(1)
-}).strict().refine((data) => data.newPassword === data.confirmPassword, {
-  message: 'Las contraseñas nuevas no coinciden.',
-  path: ['confirmPassword']
-}).refine((data) => data.currentPassword !== data.newPassword, {
-  message: 'La contraseña nueva debe ser diferente a la actual.',
-  path: ['newPassword']
-});
+export const preferencesSchema = z.object({
+  timezone: z.string().trim().min(1).max(50),
+  locale: z.string().trim().min(2).max(10)
+}).strict();

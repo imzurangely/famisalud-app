@@ -2,14 +2,18 @@ import { withTransaction } from '../../config/database.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { assertCanManageMember, assertCanViewMember } from '../../shared/authorization/familyAccess.js';
 import { writeAuditLog } from '../../shared/utils/auditLog.js';
-import { deleteDocument, uploadDocument } from './cloudinary.service.js';
+import { createDocumentDeliveryUrl, deleteDocument, uploadDocument } from './cloudinary.service.js';
 import * as repository from './document.repository.js';
 
 const RESOURCE = 'documents';
 const TABLE = 'documents';
 
-function getCloudinaryResourceType(mimeType) {
-  return mimeType?.startsWith('image/') ? 'image' : 'raw';
+function getCloudinaryResourceType(mimeType, fileUrl = '') {
+  try {
+    const match = new URL(fileUrl).pathname.match(/\/(image|raw|video)\/(?:upload|private|authenticated)\//);
+    if (match) return match[1];
+  } catch { /* Infer the resource type for legacy records without an absolute URL. */ }
+  return mimeType === 'application/pdf' ? 'raw' : mimeType?.startsWith('image/') ? 'image' : 'raw';
 }
 
 function normalizeCategoryData(data, currentCategory = null, currentCustomCategory = null) {
@@ -73,6 +77,30 @@ export async function getById(memberId, documentId, userId) {
 
     return item;
   });
+}
+
+export async function getFile(memberId, documentId, userId, download = false) {
+  const document = await withTransaction(async (client) => {
+    await assertCanViewMember(client, memberId, userId);
+    const item = await repository.findById(client, documentId, memberId);
+    if (!item) throw new AppError('Documento no encontrado.', 404);
+    return item;
+  });
+
+  const deliveryUrl = await createDocumentDeliveryUrl({
+    publicId: document.cloudinary_public_id,
+    fileUrl: document.file_url,
+    mimeType: document.mime_type,
+    fileName: document.original_file_name,
+    download
+  });
+
+  return {
+    deliveryUrl,
+    fileName: document.original_file_name || document.title || 'documento',
+    mimeType: document.mime_type || 'application/octet-stream',
+    download
+  };
 }
 
 export async function create(memberId, userId, data, file) {
@@ -151,7 +179,7 @@ export async function update(memberId, documentId, userId, data, file) {
       if (uploaded) {
         oldFile = {
           publicId: before.cloudinary_public_id,
-          resourceType: getCloudinaryResourceType(before.mime_type)
+          resourceType: getCloudinaryResourceType(before.mime_type, before.file_url)
         };
 
         updateData.originalFileName = file.originalname;
@@ -221,7 +249,7 @@ export async function remove(memberId, documentId, userId) {
 
     try {
       if (item.cloudinary_public_id) {
-        await deleteDocument(item.cloudinary_public_id, getCloudinaryResourceType(item.mime_type));
+        await deleteDocument(item.cloudinary_public_id, getCloudinaryResourceType(item.mime_type, item.file_url));
       }
     } catch (error) {
       console.error('[documents] Documento eliminado de BD pero falló la eliminación en Cloudinary:', error);

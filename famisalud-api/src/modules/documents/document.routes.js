@@ -36,6 +36,12 @@ router.post(
 );
 
 router.get(
+  '/members/:memberId/documents/:documentId/file',
+  validateResource({ params: resourceParamsSchema }),
+  controller.file
+);
+
+router.get(
   '/members/:memberId/documents/:documentId',
   validateResource({ params: resourceParamsSchema }),
   controller.getById

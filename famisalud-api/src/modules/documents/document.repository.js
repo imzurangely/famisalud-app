@@ -147,7 +147,7 @@ export async function softDelete(client, documentId, memberId) {
      WHERE id = $1
        AND ${personMemberScope('member_id', '$2')}
        AND deleted_at IS NULL
-     RETURNING id, member_id, cloudinary_public_id, mime_type, deleted_at`,
+     RETURNING id, member_id, cloudinary_public_id, file_url, mime_type, deleted_at`,
     [documentId, memberId]
   );
 

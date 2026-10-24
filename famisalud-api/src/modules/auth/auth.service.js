@@ -24,11 +24,11 @@ function safeUser(user) {
     firstName: user.first_name,
     lastName: user.last_name,
     email: user.email,
+    phone: user.phone,
     birthDate: user.birth_date,
     gender: user.gender,
     customGender: user.custom_gender,
     bloodType: user.blood_type,
-    phone: user.phone,
     sisben: user.sisben,
     stratum: user.stratum,
     avatarUrl: user.avatar_url,
@@ -161,52 +161,24 @@ export async function getMe(userId) {
 }
 
 export async function updateOwnProfile(userId, data) {
-  const user = await withTransaction(async (client) => {
-    const current = await repository.findUserById(client, userId);
-    if (!current) throw new AppError('Usuario no encontrado o inactivo.', 401);
-
-    const nextGender = data.gender !== undefined ? data.gender : current.gender;
-    const nextCustomGender = data.customGender !== undefined ? data.customGender : current.custom_gender;
-    if (nextGender === 'OTRO' && !nextCustomGender) {
-      throw new AppError('Debes indicar cuál es tu género cuando seleccionas "Otro".', 422);
-    }
-
-    const normalized = { ...data };
-    if (nextGender !== 'OTRO' && (data.gender !== undefined || data.customGender !== undefined)) {
-      normalized.customGender = null;
-    }
-
-    const updated = await repository.updateOwnProfile(client, userId, normalized);
-    if (!updated) throw new AppError('No fue posible actualizar tu perfil.', 409);
-    return updated;
-  });
-  return safeUser(user);
+  const updated = await withTransaction((client) => repository.updateOwnProfile(client, userId, data));
+  if (!updated) throw new AppError('No encontramos tu perfil activo.', 404);
+  return { user: safeUser(updated) };
 }
 
 export async function updatePreferences(userId, data) {
-  if (data.timezone !== undefined) {
-    try {
-      new Intl.DateTimeFormat('en-US', { timeZone: data.timezone }).format(new Date());
-    } catch {
-      throw new AppError('La zona horaria no es válida.', 422);
-    }
-  }
-  const updated = await withTransaction((client) => repository.updateUserPreferences(client, userId, data));
-  if (!updated) throw new AppError('No fue posible actualizar tus preferencias.', 409);
-  return safeUser(updated);
+  const updated = await withTransaction((client) => repository.updatePreferences(client, userId, data));
+  if (!updated) throw new AppError('No encontramos tu cuenta activa.', 404);
+  return { user: safeUser(updated) };
 }
 
-export async function changePassword(userId, data) {
-  const result = await withTransaction(async (client) => {
-    const current = await repository.findUserCredentialsById(client, userId);
-    if (!current) throw new AppError('Usuario no encontrado o inactivo.', 401);
-    const valid = await verifyPassword(data.currentPassword, current.password_hash);
-    if (!valid) throw new AppError('La contraseña actual es incorrecta.', 422);
-    const passwordHash = await hashPassword(data.newPassword);
-    const revokedSessions = await repository.changePasswordAndRevokeSessions(client, userId, passwordHash);
-    return { changed: true, revokedSessions };
-  });
-  return result;
+export async function uploadAvatar(userId, file) {
+  if (!file) throw new AppError('Selecciona una imagen antes de subirla.', 422);
+  const { uploadProfileAvatar } = await import('./auth.media.js');
+  const uploaded = await uploadProfileAvatar(file.buffer, file.originalname, file.mimetype, userId);
+  const updated = await withTransaction((client) => repository.updateAvatarUrl(client, userId, uploaded.secure_url));
+  if (!updated) throw new AppError('No encontramos tu perfil activo.', 404);
+  return { user: safeUser(updated) };
 }
 
 export async function listSessions(userId, currentSessionId) {

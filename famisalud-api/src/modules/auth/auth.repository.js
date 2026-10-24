@@ -1,8 +1,8 @@
 export async function findUserByEmail(client, email) {
   const result = await client.query(
-    `SELECT u.id, u.person_id, p.first_name, p.last_name, p.birth_date, p.gender, p.custom_gender,
-            p.blood_type, p.phone, p.sisben, p.stratum, p.avatar_url, u.email,
-            u.password_hash, u.timezone, u.locale,
+    `SELECT u.id, u.person_id, p.first_name, p.last_name, u.email,
+            u.password_hash, p.birth_date, p.gender, p.custom_gender, p.blood_type,
+            p.phone, p.sisben, p.stratum, p.avatar_url, u.timezone, u.locale,
             u.is_verified, u.is_active, u.deleted_at, u.created_at
      FROM users u
      JOIN persons p ON p.id = u.person_id
@@ -15,9 +15,9 @@ export async function findUserByEmail(client, email) {
 
 export async function findUserById(client, userId) {
   const result = await client.query(
-    `SELECT u.id, u.person_id, p.first_name, p.last_name, p.birth_date, p.gender, p.custom_gender,
-            p.blood_type, p.phone, p.sisben, p.stratum, p.avatar_url, u.email,
-            u.timezone, u.locale, u.is_verified,
+    `SELECT u.id, u.person_id, p.first_name, p.last_name, u.email,
+            p.birth_date, p.gender, p.custom_gender, p.blood_type, p.phone,
+            p.sisben, p.stratum, p.avatar_url, u.timezone, u.locale, u.is_verified,
             u.is_active, u.created_at
      FROM users u
      JOIN persons p ON p.id = u.person_id
@@ -45,77 +45,6 @@ export async function createUser(client, data, passwordHash) {
   );
 
   return findUserById(client, userResult.rows[0].id);
-}
-
-export async function updateOwnProfile(client, userId, data) {
-  const fields = {
-    firstName: 'first_name',
-    lastName: 'last_name',
-    birthDate: 'birth_date',
-    gender: 'gender',
-    customGender: 'custom_gender',
-    bloodType: 'blood_type',
-    phone: 'phone',
-    sisben: 'sisben',
-    stratum: 'stratum',
-    avatarUrl: 'avatar_url'
-  };
-  const entries = Object.entries(data).filter(([key, value]) => key in fields && value !== undefined);
-  if (entries.length) {
-    const assignments = entries.map(([key], index) => `${fields[key]} = $${index + 2}`);
-    const values = entries.map(([, value]) => value ?? null);
-    const result = await client.query(
-      `UPDATE persons p
-       SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP
-       FROM users u
-       WHERE u.id = $1 AND u.person_id = p.id AND u.deleted_at IS NULL AND u.is_active = TRUE
-       RETURNING p.id`,
-      [userId, ...values]
-    );
-    if (!result.rows[0]) return null;
-  }
-  return findUserById(client, userId);
-}
-
-export async function updateUserPreferences(client, userId, data) {
-  const fields = { timezone: 'timezone', locale: 'locale' };
-  const entries = Object.entries(data).filter(([key, value]) => key in fields && value !== undefined);
-  if (!entries.length) return findUserById(client, userId);
-  const assignments = entries.map(([key], index) => `${fields[key]} = $${index + 2}`);
-  const values = entries.map(([, value]) => value);
-  const result = await client.query(
-    `UPDATE users SET ${assignments.join(', ')}, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1 AND deleted_at IS NULL AND is_active = TRUE
-     RETURNING id`,
-    [userId, ...values]
-  );
-  if (!result.rows[0]) return null;
-  return findUserById(client, userId);
-}
-
-export async function findUserCredentialsById(client, userId) {
-  const result = await client.query(
-    `SELECT id, password_hash FROM users
-     WHERE id = $1 AND deleted_at IS NULL AND is_active = TRUE
-     LIMIT 1`,
-    [userId]
-  );
-  return result.rows[0] ?? null;
-}
-
-export async function changePasswordAndRevokeSessions(client, userId, passwordHash) {
-  await client.query('UPDATE users SET password_hash = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [userId, passwordHash]);
-  const result = await client.query(
-    `UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP
-     WHERE user_id = $1 AND revoked_at IS NULL`,
-    [userId]
-  );
-  await client.query(
-    `UPDATE password_reset_codes SET used_at = CURRENT_TIMESTAMP
-     WHERE user_id = $1 AND used_at IS NULL`,
-    [userId]
-  );
-  return result.rowCount ?? 0;
 }
 
 export async function updatePasswordHash(client, userId, passwordHash) {
@@ -289,4 +218,68 @@ export async function hasActiveFamily(client, userId) {
     [userId]
   );
   return Boolean(result.rows[0]);
+}
+
+
+export async function updateOwnProfile(client, userId, data) {
+  const result = await client.query(
+    `UPDATE persons p
+     SET first_name = $2,
+         last_name = $3,
+         birth_date = $4,
+         gender = $5,
+         custom_gender = $6,
+         blood_type = $7,
+         phone = $8,
+         sisben = $9,
+         stratum = $10,
+         updated_at = CURRENT_TIMESTAMP
+     FROM users u
+     WHERE u.id = $1
+       AND u.person_id = p.id
+       AND u.deleted_at IS NULL
+       AND u.is_active = TRUE
+     RETURNING u.id, u.person_id, u.email, u.timezone, u.locale,
+               u.is_verified, u.is_active, u.created_at,
+               p.first_name, p.last_name, p.birth_date, p.gender,
+               p.custom_gender, p.blood_type, p.phone, p.sisben,
+               p.stratum, p.avatar_url`,
+    [userId, data.firstName, data.lastName, data.birthDate ?? null,
+      data.gender ?? null, data.customGender ?? null, data.bloodType ?? null,
+      data.phone ?? null, data.sisben ?? null, data.stratum ?? null]
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function updateAvatarUrl(client, userId, avatarUrl) {
+  const result = await client.query(
+    `UPDATE persons p
+     SET avatar_url = $2, updated_at = CURRENT_TIMESTAMP
+     FROM users u
+     WHERE u.id = $1
+       AND u.person_id = p.id
+       AND u.deleted_at IS NULL
+       AND u.is_active = TRUE
+     RETURNING u.id, u.person_id, u.email, u.timezone, u.locale,
+               u.is_verified, u.is_active, u.created_at,
+               p.first_name, p.last_name, p.birth_date, p.gender,
+               p.custom_gender, p.blood_type, p.phone, p.sisben,
+               p.stratum, p.avatar_url`,
+    [userId, avatarUrl]
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function updatePreferences(client, userId, data) {
+  const result = await client.query(
+    `UPDATE users
+     SET timezone = $2, locale = $3, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1 AND deleted_at IS NULL AND is_active = TRUE
+     RETURNING id, person_id, email, timezone, locale, is_verified, is_active, created_at`,
+    [userId, data.timezone, data.locale]
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  const person = await findUserById(client, row.id);
+  return person;
 }

@@ -69,22 +69,6 @@ export const me = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data });
 });
 
-export const updateOwnProfile = asyncHandler(async (req, res) => {
-  const user = await service.updateOwnProfile(req.user.id, req.validated.body);
-  res.status(200).json({ success: true, data: { user }, message: 'Perfil actualizado correctamente.' });
-});
-
-export const updatePreferences = asyncHandler(async (req, res) => {
-  const user = await service.updatePreferences(req.user.id, req.validated.body);
-  res.status(200).json({ success: true, data: { user }, message: 'Preferencias actualizadas correctamente.' });
-});
-
-export const changePassword = asyncHandler(async (req, res) => {
-  const data = await service.changePassword(req.user.id, req.validated.body);
-  clearRefreshCookie(res);
-  res.status(200).json({ success: true, data, message: 'Contraseña actualizada. Inicia sesión de nuevo para continuar.' });
-});
-
 export const listSessions = asyncHandler(async (req, res) => {
   const data = await service.listSessions(req.user.id, req.user.sessionId ?? null);
   res.status(200).json({ success: true, data });
@@ -115,4 +99,20 @@ export const verifyResetCode = asyncHandler(async (req, res) => {
 export const resetPassword = asyncHandler(async (req, res) => {
   const data = await service.resetPassword(req.validated.body);
   res.status(200).json({ success: true, data });
+});
+
+
+export const updateOwnProfile = asyncHandler(async (req, res) => {
+  const data = await service.updateOwnProfile(req.user.id, req.validated.body);
+  res.status(200).json({ success: true, data });
+});
+
+export const updatePreferences = asyncHandler(async (req, res) => {
+  const data = await service.updatePreferences(req.user.id, req.validated.body);
+  res.status(200).json({ success: true, data });
+});
+
+export const uploadAvatar = asyncHandler(async (req, res) => {
+  const data = await service.uploadAvatar(req.user.id, req.file);
+  res.status(200).json({ success: true, data, message: 'Foto de perfil actualizada correctamente.' });
 });
