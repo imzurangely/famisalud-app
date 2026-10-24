@@ -5,7 +5,6 @@ import {
   AlertCircle,
   Plus,
   RefreshCw,
-  ShieldCheck,
   UsersRound,
 } from "lucide-react";
 import { Link } from "react-router-dom";

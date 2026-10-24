@@ -593,7 +593,6 @@ export default function MedicationsPage() {
     error,
     clearError,
     canManageSelected,
-    reloadMedications,
     reloadDetails,
     reloadEverything,
   } = useMedications({

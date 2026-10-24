@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Bell,
   CheckCheck,
-  Info,
   RefreshCw,
   SlidersHorizontal,
 } from "lucide-react";

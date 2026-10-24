@@ -6,7 +6,6 @@ import {
   Menu,
   Moon,
   Search,
-  Settings,
   UserRound,
   X,
   Sun,

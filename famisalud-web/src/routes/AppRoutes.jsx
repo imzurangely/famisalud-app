@@ -18,7 +18,7 @@ const AppointmentsPage = lazy(() => import('../features/appointments/pages/Appoi
 const DocumentsPage = lazy(() => import('../features/documents/pages/DocumentsPage.jsx'));
 const MedicationsPage = lazy(() => import('../features/medications/pages/MedicationsPage.jsx'));
 const ProfilePage = lazy(() => import('../features/profile/pages/ProfilePage.jsx'));
-const PreferencesPage = lazy(() => import('../features/profile/pages/PreferencesPage.jsx'));
+/* const PreferencesPage = lazy(() => import('../features/profile/pages/PreferencesPage.jsx')); */
 const NotificationsPage = lazy(() => import('../features/notifications/pages/NotificationsPage.jsx'));
 
 

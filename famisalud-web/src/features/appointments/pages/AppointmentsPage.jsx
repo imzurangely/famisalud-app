@@ -5,7 +5,6 @@ import {
   CalendarDays,
   Plus,
   RefreshCw,
-  ShieldCheck,
   UsersRound,
 } from "lucide-react";
 import { useFamilies } from "../../../shared/hooks/useFamily.js";
