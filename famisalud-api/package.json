@@ -9,7 +9,8 @@
     "start": "node src/index.js",
     "db:migrate": "node src/database/migrate.js",
     "db:seed": "node src/database/seed.js",
-    "db:setup": "npm run db:migrate && npm run db:seed"
+    "db:setup": "npm run db:migrate && npm run db:seed",
+    "db:seed:portfolio": "node scripts/seed-portfolio-demo.js"
   },
   "engines": {
     "node": ">=24.0.0"

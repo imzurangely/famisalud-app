@@ -25,9 +25,21 @@ export const app = express();
 
 app.disable('x-powered-by');
 
+const allowedOrigins = env.FRONTEND_URL 
+  ? env.FRONTEND_URL.split(',').map(url => url.trim()) 
+  : [];
+
 app.use(cors({
-  origin: env.FRONTEND_URL,
-  credentials: true
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS Error: El origen ${origin} no está permitido.`));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
 app.use(express.json({ limit: '1mb' }));
