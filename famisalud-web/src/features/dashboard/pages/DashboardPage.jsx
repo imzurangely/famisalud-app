@@ -14,6 +14,7 @@ import {
   Pill,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
   TriangleAlert,
   XCircle,
   UsersRound,
@@ -22,6 +23,8 @@ import { useAuth } from "../../../shared/hooks/useAuth.js";
 import { useFamilies } from "../../../shared/hooks/useFamily.js";
 import Button from "../../../shared/components/ui/Button.jsx";
 import EmptyState from "../../../shared/components/ui/EmptyState.jsx";
+import ScrollArea from "../../../shared/components/ui/ScrollArea.jsx";
+import Select from "../../../shared/components/ui/Select.jsx";
 import { notify } from "../../../shared/utils/feedback.js";
 import { friendlyErrorMessage } from "../../../shared/utils/friendlyErrors.js";
 import {
@@ -34,6 +37,7 @@ import {
 import { updateAppointment } from "../../appointments/services/appointmentsService.js";
 import { loadDashboardData } from "../services/dashboardService.js";
 import DashboardActionModal from "../components/DashboardActionModal.jsx";
+import WeeklyAdherenceChart from "../components/WeeklyAdherenceChart.jsx";
 import {
   buildDashboardDestinations,
   buildTodayDoseTasks,
@@ -219,7 +223,7 @@ function AppointmentRow({ item, canManage, onAttendance, onCancel }) {
             className="min-h-9 px-3 py-2 text-[10px]"
             onClick={() => onAttendance(item)}
           >
-            <CalendarCheck size={13} /> Marcar asistí
+            <CalendarCheck size={13} /> Marcar asistencia
           </Button>
         )}
         {canManage && isFuturePending && (
@@ -446,91 +450,6 @@ function RenewalAttentionRow({
   );
 }
 
-function WeeklyAdherenceChart({ stats }) {
-  const maxRecorded = Math.max(...stats.days.map((day) => day.recorded), 1);
-  return (
-    <section className="surface-card flex h-full min-h-105 flex-col p-5 sm:p-6 xl:h-115 xl:min-h-115">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-brand-700 dark:text-brand-300">
-            Seguimiento
-          </p>
-          <h2 className="mt-1 text-base font-extrabold text-slate-900 dark:text-white">
-            Tomas de los últimos 7 días
-          </h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Solo incluye tomas con un resultado registrado.
-          </p>
-        </div>
-        <div className="shrink-0 rounded-2xl bg-brand-50 px-3 py-2 text-right dark:bg-brand-950/40">
-          <p className="font-display text-2xl font-extrabold text-brand-700 dark:text-brand-200">
-            {stats.percent === null ? "—" : `${stats.percent}%`}
-          </p>
-          <p className="text-[9px] font-bold text-brand-700/70 dark:text-brand-300/70">
-            Cumplimiento
-          </p>
-        </div>
-      </div>
-      {stats.recorded === 0 ? (
-        <div className="mt-5 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center dark:border-slate-800">
-          <Activity className="mx-auto text-slate-300" size={26} />
-          <p className="mt-2 text-xs font-bold text-slate-600 dark:text-slate-300">
-            Aún no hay datos para la gráfica
-          </p>
-          <p className="mt-1 max-w-xs text-[11px] text-slate-400">
-            Cuando se registren tomas, verás el seguimiento de la semana aquí.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-5 flex min-h-52.5 flex-1 items-stretch gap-2 sm:gap-3">
-          {stats.days.map((day) => (
-            <div
-              key={day.key}
-              className="flex min-w-0 flex-1 flex-col items-center gap-2"
-            >
-              <div className="flex min-h-42.5 w-full flex-1 items-end justify-center rounded-t-lg bg-slate-50 px-1 dark:bg-slate-900">
-                {day.recorded > 0 && (
-                  <div
-                    className="relative flex w-full max-w-9 items-end justify-center overflow-hidden rounded-t-md bg-brand-100 dark:bg-brand-950"
-                    style={{
-                      height: `${Math.max(10, (day.recorded / maxRecorded) * 100)}%`,
-                      minHeight: "12%",
-                    }}
-                  >
-                    <div
-                      className="absolute bottom-0 w-full rounded-t-md bg-brand-500 dark:bg-brand-400"
-                      style={{ height: `${day.percent}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-              <span className="text-[10px] font-semibold capitalize text-slate-500 dark:text-slate-400">
-                {day.label}
-              </span>
-              <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                {day.recorded ? `${day.percent}%` : "—"}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-4 text-[10px] text-slate-500 dark:text-slate-400">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2 rounded-sm bg-brand-500" />
-          Tomadas o retrasadas
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2 rounded-sm bg-brand-100 dark:bg-brand-950" />
-          Omitidas o no realizadas
-        </span>
-        <span className="ml-auto font-semibold">
-          {stats.completed} de {stats.recorded} registradas
-        </span>
-      </div>
-    </section>
-  );
-}
-
 function MedicationProcessesCard({
   deliveries,
   renewals,
@@ -568,7 +487,7 @@ function MedicationProcessesCard({
           </p>
         </div>
       ) : (
-        <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+        <ScrollArea className="mt-4 min-h-0 flex-1 space-y-3 pr-1">
           {rows.map((item, index) =>
             item.rowType === "delivery" ? (
               <DeliveryAttentionRow
@@ -591,7 +510,7 @@ function MedicationProcessesCard({
               />
             ),
           )}
-        </div>
+        </ScrollArea>
       )}
     </section>
   );
@@ -612,6 +531,7 @@ export default function DashboardPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeAction, setActiveAction] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
+  const [dashboardScope, setDashboardScope] = useState("all");
   const requestIdRef = useRef(0);
   const selectedFamilyIdRef = useRef(selectedFamilyId);
   selectedFamilyIdRef.current = selectedFamilyId;
@@ -655,32 +575,113 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setActiveAction(null);
+    setDashboardScope("all");
   }, [selectedFamilyId]);
+
+  const currentPersonId =
+    user?.personId ??
+    user?.person_id ??
+    user?.person?.id ??
+    user?.person?.personId ??
+    user?.person?.person_id ??
+    null;
+  const ownMemberRecord = useMemo(
+    () =>
+      data.members.find(({ member }) => {
+        const memberUserId = linkedUserId(member);
+        if (
+          user?.id != null &&
+          memberUserId != null &&
+          String(memberUserId) === String(user.id)
+        )
+          return true;
+        const memberPersonId =
+          fieldValue(member, "personId", "person_id") ??
+          fieldValue(member?.person, "id");
+        return (
+          currentPersonId != null &&
+          memberPersonId != null &&
+          String(memberPersonId) === String(currentPersonId)
+        );
+      }) || null,
+    [data.members, user?.id, currentPersonId],
+  );
+
+  const dashboardScopeOptions = useMemo(() => {
+    const ownMemberId = ownMemberRecord?.member?.id;
+    const options = [
+      {
+        value: "all",
+        label: "Toda la familia",
+        description: `${data.members.length} ${data.members.length === 1 ? "perfil incluido" : "perfiles incluidos"}`,
+      },
+    ];
+    if (ownMemberRecord) {
+      options.push({
+        value: "self",
+        label: `Mi perfil · ${memberName(ownMemberRecord.member)}`,
+        description: "Datos vinculados a tu cuenta",
+      });
+    }
+    options.push(
+      ...data.members
+        .filter(({ member }) => String(member.id) !== String(ownMemberId))
+        .map(({ member }) => ({
+          value: `member:${member.id}`,
+          label: memberName(member),
+          description: "Ver solo este perfil",
+        })),
+    );
+    return options;
+  }, [data.members, ownMemberRecord]);
+
+  const scopedMemberRecords = useMemo(() => {
+    if (dashboardScope === "all") return data.members;
+    if (dashboardScope === "self")
+      return ownMemberRecord ? [ownMemberRecord] : [];
+    if (dashboardScope.startsWith("member:")) {
+      const memberId = dashboardScope.slice("member:".length);
+      return data.members.filter(
+        ({ member }) => String(member.id) === memberId,
+      );
+    }
+    return data.members;
+  }, [data.members, dashboardScope, ownMemberRecord]);
+
+  const dashboardScopeLabel =
+    dashboardScopeOptions.find((option) => option.value === dashboardScope)
+      ?.label || "Toda la familia";
+  const dashboardScopeDescription =
+    dashboardScope === "all"
+      ? `Citas, medicamentos, tomas y trámites de todas las personas de ${selectedFamily?.name || "este espacio"}.`
+      : dashboardScope === "self"
+        ? "Mostrando únicamente la información del perfil vinculado a tu cuenta."
+        : `Mostrando únicamente la información de ${dashboardScopeOptions.find((option) => option.value === dashboardScope)?.label || "la persona seleccionada"}.`;
 
   const allAppointments = useMemo(
     () =>
-      data.members.flatMap((item) =>
+      scopedMemberRecords.flatMap((item) =>
         item.appointments.map((appointment) => ({
           member: item.member,
           appointment,
         })),
       ),
-    [data.members],
+    [scopedMemberRecords],
   );
   const allMedicationDetails = useMemo(
     () =>
-      data.members.flatMap((item) =>
+      scopedMemberRecords.flatMap((item) =>
         item.medications.map((detail) => ({ ...detail, member: item.member })),
       ),
-    [data.members],
+    [scopedMemberRecords],
   );
   const doseTasks = useMemo(
-    () => buildTodayDoseTasks(data.members),
-    [data.members],
+    () => buildTodayDoseTasks(scopedMemberRecords),
+    [scopedMemberRecords],
   );
   const weeklyStats = useMemo(
-    () => buildWeeklyAdherence(data.members),
-    [data.members],
+    () => buildWeeklyAdherence(scopedMemberRecords),
+    [scopedMemberRecords],
   );
   const now = Date.now();
   const allUpcomingAppointments = useMemo(
@@ -713,7 +714,6 @@ export default function DashboardPage() {
             fieldValue(appointment, "startsAt", "starts_at"),
           ).getTime();
           return (
-            Number.isFinite(startsAt) &&
             startsAt <= now &&
             ["PROGRAMADA", "REPROGRAMADA"].includes(
               getAppointmentStatus(appointment),
@@ -937,11 +937,14 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-10 sm:space-y-7">
-      <header className="relative overflow-hidden rounded-[28px] module-header-dark px-5 py-6 text-white shadow-xl shadow-brand-900/10 sm:px-8 sm:py-8 lg:px-9">
+      <header className="relative overflow-hidden rounded-[28px] bg-linear-to-br from-[#218C9A] via-[#2596A6] to-[#347A9E] px-5 py-6 text-white shadow-xl shadow-brand-900/10 sm:px-8 sm:py-8 lg:px-9">
         <div className="absolute -right-16 -top-20 size-64 rounded-full border-38 border-white/[0.07]" />
         <div className="absolute -bottom-24 right-[25%] size-48 rounded-full border-28 border-white/6" />
         <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold tracking-wide text-white/90">
+              <Sparkles size={13} /> CUIDADO QUE NOS UNE
+            </span>
             <h1 className="mt-4 font-display text-[27px] font-extrabold leading-tight tracking-tight sm:text-[34px]">
               {firstName ? `Hola, ${firstName}.` : "La salud de tu familia,"}
               <br className="hidden sm:block" />{" "}
@@ -967,7 +970,7 @@ export default function DashboardPage() {
                 size={14}
                 className={refreshing || loading ? "animate-spin" : ""}
               />{" "}
-              Actualizar
+              Actualizar datos
             </Button>
             <Link
               to="/familia"
@@ -977,7 +980,51 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+        <div className="relative z-10 mt-6 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-semibold">
+            <ShieldCheck size={13} /> Información según tus permisos
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-semibold">
+            <UsersRound size={13} />
+            {data.members.length}{" "}
+            {data.members.length === 1
+              ? "perfil en esta familia"
+              : "perfiles en esta familia"}
+          </span>
+        </div>
       </header>
+
+      <section className="surface-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-brand-700 dark:text-brand-300">
+            Personaliza tu vista
+          </p>
+          <h2 className="mt-1 text-sm font-extrabold text-slate-900 dark:text-white">
+            ¿De quién quieres ver la información?
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            {dashboardScopeDescription}
+          </p>
+        </div>
+        <div className="w-full sm:max-w-xs sm:flex-1">
+          <label
+            htmlFor="dashboard-person-filter"
+            className="mb-1.5 block text-[10px] font-bold text-slate-600 dark:text-slate-300"
+          >
+            Mostrar datos de
+          </label>
+          <Select
+            id="dashboard-person-filter"
+            ariaLabel="Filtrar todo el dashboard por persona"
+            value={dashboardScope}
+            options={dashboardScopeOptions}
+            onChange={(event) => setDashboardScope(event.target.value)}
+            className="w-full"
+            placeholder="Selecciona un perfil"
+            emptyMessage="No hay perfiles disponibles."
+          />
+        </div>
+      </section>
 
       {familyError && <InlineNotice>{familyError}</InlineNotice>}
       {globalError && (
@@ -1012,8 +1059,8 @@ export default function DashboardPage() {
                 Lo importante, de un vistazo
               </h2>
             </div>
-            <span className="text-[10px] text-slate-400">
-              Datos de {selectedFamily?.name || "tu familia"}
+            <span className="text-right text-[10px] text-slate-400">
+              Vista: {dashboardScopeLabel}
             </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1158,7 +1205,7 @@ export default function DashboardPage() {
             action="Gestionar citas"
             to="/citas"
           />
-          <div className="space-y-3">
+          <ScrollArea maxHeight="28rem" className="space-y-3 pr-1">
             {upcomingAppointments.map((item) => (
               <AppointmentRow
                 key={item.appointment.id}
@@ -1189,7 +1236,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
             )}
-          </div>
+          </ScrollArea>
         </section>
         <section className="surface-card p-5 sm:p-6">
           <SectionHeading
@@ -1198,8 +1245,8 @@ export default function DashboardPage() {
             action="Gestionar horarios"
             to="/medicamentos?tab=horarios"
           />
-          <div className="space-y-3">
-            {doseTasks.slice(0, 6).map((task) => (
+          <ScrollArea maxHeight="28rem" className="space-y-3 pr-1">
+            {doseTasks.map((task) => (
               <DoseRow
                 key={task.id}
                 task={task}
@@ -1226,20 +1273,15 @@ export default function DashboardPage() {
                 </Link>
               </div>
             )}
-          </div>
-          {doseTasks.length > 6 && (
-            <Link
-              to="/medicamentos?tab=horarios"
-              className="mt-4 flex items-center justify-center gap-1 rounded-xl border border-slate-200 py-2.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900"
-            >
-              Ver las {doseTasks.length} tomas <ArrowRight size={13} />
-            </Link>
-          )}
+          </ScrollArea>
         </section>
       </div>
 
       <div className="grid items-stretch gap-5 xl:grid-cols-2">
-        <WeeklyAdherenceChart stats={weeklyStats} />
+        <WeeklyAdherenceChart
+          stats={weeklyStats}
+          scopeLabel={dashboardScopeLabel}
+        />
         <MedicationProcessesCard
           deliveries={deliveryItems}
           renewals={renewalItems}
@@ -1260,7 +1302,7 @@ export default function DashboardPage() {
             action="Ver citas"
             to="/citas"
           />
-          <div className="space-y-3">
+          <ScrollArea maxHeight="28rem" className="space-y-3 pr-1">
             {pendingAttendance.map((item) => (
               <AppointmentRow
                 key={`attendance-${item.appointment.id}`}
@@ -1274,7 +1316,7 @@ export default function DashboardPage() {
                 }
               />
             ))}
-          </div>
+          </ScrollArea>
         </section>
       )}
 

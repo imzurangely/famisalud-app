@@ -1,0 +1,30 @@
+.scroll-area {
+  --scroll-thumb: #10d4ad;       
+  --scroll-thumb-hover: #098171; 
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+  overscroll-behavior: contain;
+}
+
+.dark .scroll-area {
+  --scroll-thumb: #115e59;       
+  --scroll-thumb-hover: #0d9488; 
+}
+
+@supports not (scrollbar-color: auto) {
+  .scroll-area::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scroll-area::-webkit-scrollbar-track,
+  .scroll-area::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  .scroll-area::-webkit-scrollbar-thumb {
+    background: var(--scroll-thumb);
+    border-radius: 9999px;
+  }
+  .scroll-area::-webkit-scrollbar-thumb:hover {
+    background: var(--scroll-thumb-hover);
+  }
+}

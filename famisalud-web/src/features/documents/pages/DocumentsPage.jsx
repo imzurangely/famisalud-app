@@ -41,7 +41,7 @@ export default function DocumentsPage() {
     selectedFamilyId: activeFamilyId,
     selectFamily,
   } = useFamilies();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialMemberId = searchParams.get("memberId") || "";
   const initialPersonId = searchParams.get("personId") || "";
   const initialAppointmentId = searchParams.get("appointmentId") || "";
@@ -148,9 +148,25 @@ export default function DocumentsPage() {
     }
   }
 
+  const changeAppointmentFilter = useCallback(
+    (appointmentId) => {
+      setFilters((current) => ({ ...current, appointmentId }));
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          if (appointmentId) next.set("appointmentId", appointmentId);
+          else next.delete("appointmentId");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setFilters, setSearchParams],
+  );
+
   function changeMember(memberId) {
     setSelectedMemberId(memberId);
-    setFilters((current) => ({ ...current, appointmentId: "" }));
+    changeAppointmentFilter("");
   }
 
   const handlePreviewError = useCallback((message) => {
@@ -352,12 +368,7 @@ export default function DocumentsPage() {
           <Select
             className="form-input"
             value={filters.appointmentId}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                appointmentId: event.target.value,
-              }))
-            }
+            onChange={(event) => changeAppointmentFilter(event.target.value)}
             disabled={loadingAppointments}
           >
             <option value="">Todas las citas</option>
@@ -370,7 +381,7 @@ export default function DocumentsPage() {
         </label>
       </section>
 
-      {initialAppointmentId && (
+      {filters.appointmentId && (
         <div className="rounded-xl border border-brand-100 bg-brand-50/70 px-4 py-3 text-xs text-brand-800 dark:border-brand-900/70 dark:bg-brand-950/25 dark:text-brand-200">
           Mostrando documentos vinculados a la cita seleccionada.
         </div>
@@ -383,16 +394,14 @@ export default function DocumentsPage() {
             </span>
           )}
         </div>
-        {initialAppointmentId && (
-          <button
-            type="button"
-            className="text-xs font-bold text-brand-700 underline dark:text-brand-300"
-            onClick={() => {
-              setFilters((current) => ({ ...current, appointmentId: "" }));
-            }}
+        {filters.appointmentId && (
+          <Button
+            variant="secondary"
+              className="border-gray-300! bg-gray-50! text-brand-600! hover:bg-white/20!"
+            onClick={() => changeAppointmentFilter("")}
           >
             Quitar filtro de cita
-          </button>
+          </Button>
         )}
       </div>
 

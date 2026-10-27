@@ -205,56 +205,128 @@ export function buildWeeklyAdherence(
   const start = new Date(referenceDate);
   start.setHours(0, 0, 0, 0);
   start.setDate(start.getDate() - 6);
-  const days = [];
+  const referenceTime = new Date(referenceDate).getTime();
+  const allLogs = memberRecords.flatMap(({ medications = [] }) =>
+    medications.flatMap(({ logs = [] }) => logs),
+  );
 
+  function occurrenceKey(scheduleId, value) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return `${String(scheduleId || '')}|${localDateKey(date)}|${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  }
+
+  function logKey(log) {
+    const scheduleId =
+      fieldValue(log, 'medicationScheduleId', 'medication_schedule_id') ||
+      fieldValue(log, 'scheduleId', 'schedule_id');
+    return occurrenceKey(scheduleId, fieldValue(log, 'scheduledAt', 'scheduled_at'));
+  }
+
+  function addLogOutcome(counts, log, scheduledAt) {
+    const status = String(fieldValue(log, 'status') || '').toUpperCase();
+    if (status === 'TOMADO') {
+      counts.onTime += 1;
+      counts.recorded += 1;
+    } else if (status === 'RETRASADO') {
+      counts.delayed += 1;
+      counts.recorded += 1;
+    } else if (['OLVIDADO', 'OMITIDO'].includes(status)) {
+      counts.missed += 1;
+      counts.recorded += 1;
+    } else if (status === 'PENDIENTE') {
+      if (new Date(scheduledAt).getTime() <= referenceTime) counts.pendingDue += 1;
+      else counts.pendingUpcoming += 1;
+    }
+  }
+
+  const days = [];
   for (let offset = 0; offset < 7; offset += 1) {
     const date = new Date(start);
     date.setDate(start.getDate() + offset);
     const key = localDateKey(date);
-    const logs = memberRecords
-      .flatMap(({ medications }) =>
-        medications.flatMap(({ logs: entries }) => entries),
-      )
-      .filter(
-        (log) =>
-          localDateKey(fieldValue(log, "scheduledAt", "scheduled_at")) === key,
-      );
-    const outcomes = logs.filter(
-      (log) =>
-        String(fieldValue(log, "status") || "").toUpperCase() !== "PENDIENTE",
+    const dayLogs = allLogs.filter(
+      (log) => localDateKey(fieldValue(log, 'scheduledAt', 'scheduled_at')) === key,
     );
-    const completed = outcomes.filter((log) =>
-      ["TOMADO", "RETRASADO"].includes(
-        String(fieldValue(log, "status") || "").toUpperCase(),
-      ),
-    ).length;
+    const counts = {
+      onTime: 0,
+      delayed: 0,
+      missed: 0,
+      pendingDue: 0,
+      pendingUpcoming: 0,
+      unrecorded: 0,
+      recorded: 0,
+    };
+    const matchedLogKeys = new Set();
+
+    // Calcula las tomas que correspondían a horarios activos. Si la hora ya pasó
+    // y nunca se creó un registro, se muestra como "Sin registrar" en lugar de
+    // ignorarla y producir un porcentaje artificialmente alto.
+    for (const { medications = [] } of memberRecords) {
+      for (const detail of medications) {
+        const { medication, schedules = [] } = detail;
+        for (const schedule of schedules) {
+          if (!scheduleIsActiveToday(schedule, medication, key, date)) continue;
+          for (const scheduledAt of buildScheduledTimes(schedule, date)) {
+            const keyForOccurrence = occurrenceKey(schedule.id, scheduledAt);
+            const matchingLog = dayLogs.find((log) =>
+              logKey(log) === keyForOccurrence && !matchedLogKeys.has(keyForOccurrence),
+            );
+
+            if (matchingLog) {
+              matchedLogKeys.add(keyForOccurrence);
+              addLogOutcome(counts, matchingLog, scheduledAt);
+            } else if (scheduledAt.getTime() <= referenceTime) {
+              counts.unrecorded += 1;
+            } else {
+              counts.pendingUpcoming += 1;
+            }
+          }
+        }
+      }
+    }
+
+    // Conserva en la gráfica los registros históricos cuyos horarios ya no están
+    // activos actualmente, sin contarlos dos veces si coincidieron con un horario.
+    for (const log of dayLogs) {
+      if (matchedLogKeys.has(logKey(log))) continue;
+      addLogOutcome(counts, log, fieldValue(log, 'scheduledAt', 'scheduled_at'));
+    }
+
+    const due = counts.onTime + counts.delayed + counts.missed + counts.pendingDue + counts.unrecorded;
     days.push({
       key,
-      label: new Intl.DateTimeFormat("es-CO", { weekday: "short" })
+      label: new Intl.DateTimeFormat('es-CO', { weekday: 'short' })
         .format(date)
-        .replace(".", ""),
+        .replace('.', ''),
       day: date.getDate(),
-      recorded: outcomes.length,
-      completed,
-      percent: outcomes.length
-        ? Math.round((completed / outcomes.length) * 100)
-        : 0,
+      ...counts,
+      due,
+      pending: counts.pendingDue + counts.pendingUpcoming,
+      percent: due ? Math.round((counts.onTime / due) * 100) : null,
     });
   }
 
-  const totals = days.reduce(
-    (total, day) => ({
-      recorded: total.recorded + day.recorded,
-      completed: total.completed + day.completed,
-    }),
-    { recorded: 0, completed: 0 },
-  );
+  const totals = days.reduce((total, day) => ({
+    onTime: total.onTime + day.onTime,
+    delayed: total.delayed + day.delayed,
+    missed: total.missed + day.missed,
+    pendingDue: total.pendingDue + day.pendingDue,
+    pendingUpcoming: total.pendingUpcoming + day.pendingUpcoming,
+    unrecorded: total.unrecorded + day.unrecorded,
+    recorded: total.recorded + day.recorded,
+    due: total.due + day.due,
+  }), {
+    onTime: 0, delayed: 0, missed: 0, pendingDue: 0, pendingUpcoming: 0,
+    unrecorded: 0, recorded: 0, due: 0,
+  });
+
   return {
     days,
     ...totals,
-    percent: totals.recorded
-      ? Math.round((totals.completed / totals.recorded) * 100)
-      : null,
+    completed: totals.onTime,
+    pending: totals.pendingDue + totals.pendingUpcoming,
+    percent: totals.due ? Math.round((totals.onTime / totals.due) * 100) : null,
   };
 }
 

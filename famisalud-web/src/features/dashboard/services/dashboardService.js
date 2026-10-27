@@ -1,11 +1,11 @@
-import { listAppointments } from "../../appointments/services/appointmentsService.js";
-import { listFamilyMembers } from "../../family/services/familyMemberService.js";
+import { listAppointments } from '../../appointments/services/appointmentsService.js';
+import { listFamilyMembers } from '../../family/services/familyMemberService.js';
 import {
   getMedicationProcessSummary,
   listMedicationLogs,
   listMedications,
   listSchedules,
-} from "../../medications/services/medicationsService.js";
+} from '../../medications/services/medicationsService.js';
 
 function startOfLocalDay(date) {
   const result = new Date(date);
@@ -21,53 +21,40 @@ function shiftDays(date, days) {
 
 async function loadMemberData(member, windows) {
   const errors = [];
+  // El dashboard necesita también citas PROGRAMADA/REPROGRAMADA antiguas
+  // que aún no tienen asistencia registrada. No limitamos la consulta por fecha.
   const [appointmentResult, medicationResult] = await Promise.allSettled([
-    // El dashboard debe recuperar también citas PROGRAMADA/REPROGRAMADA antiguas
-    // para que se pueda registrar asistencia aunque hayan pasado semanas o meses.
     listAppointments(member.id),
     listMedications(member.id),
   ]);
 
-  const appointments =
-    appointmentResult.status === "fulfilled" ? appointmentResult.value : [];
-  const medications =
-    medicationResult.status === "fulfilled" ? medicationResult.value : [];
+  const appointments = appointmentResult.status === 'fulfilled' ? appointmentResult.value : [];
+  const medications = medicationResult.status === 'fulfilled' ? medicationResult.value : [];
 
-  if (appointmentResult.status === "rejected")
-    errors.push("No se pudieron cargar algunas citas.");
-  if (medicationResult.status === "rejected")
-    errors.push("No se pudieron cargar algunos medicamentos.");
+  if (appointmentResult.status === 'rejected') errors.push('No se pudieron cargar algunas citas.');
+  if (medicationResult.status === 'rejected') errors.push('No se pudieron cargar algunos medicamentos.');
 
-  const medicationDetails = await Promise.all(
-    medications.map(async (medication) => {
-      const [scheduleResult, logsResult, processResult] =
-        await Promise.allSettled([
-          listSchedules(member.id, medication.id),
-          listMedicationLogs(member.id, medication.id, 100, {
-            from: windows.logsFrom,
-            to: windows.logsTo,
-          }),
-          getMedicationProcessSummary(member.id, medication.id),
-        ]);
+  const medicationDetails = await Promise.all(medications.map(async (medication) => {
+    const [scheduleResult, logsResult, processResult] = await Promise.allSettled([
+      listSchedules(member.id, medication.id),
+      listMedicationLogs(member.id, medication.id, 100, {
+        from: windows.logsFrom,
+        to: windows.logsTo,
+      }),
+      getMedicationProcessSummary(member.id, medication.id),
+    ]);
 
-      if (
-        scheduleResult.status === "rejected" ||
-        logsResult.status === "rejected" ||
-        processResult.status === "rejected"
-      ) {
-        errors.push("No se pudo cargar parte del seguimiento de medicamentos.");
-      }
+    if (scheduleResult.status === 'rejected' || logsResult.status === 'rejected' || processResult.status === 'rejected') {
+      errors.push('No se pudo cargar parte del seguimiento de medicamentos.');
+    }
 
-      return {
-        medication,
-        schedules:
-          scheduleResult.status === "fulfilled" ? scheduleResult.value : [],
-        logs: logsResult.status === "fulfilled" ? logsResult.value : [],
-        processSummary:
-          processResult.status === "fulfilled" ? processResult.value : null,
-      };
-    }),
-  );
+    return {
+      medication,
+      schedules: scheduleResult.status === 'fulfilled' ? scheduleResult.value : [],
+      logs: logsResult.status === 'fulfilled' ? logsResult.value : [],
+      processSummary: processResult.status === 'fulfilled' ? processResult.value : null,
+    };
+  }));
 
   return { member, appointments, medications: medicationDetails, errors };
 }
@@ -86,9 +73,7 @@ export async function loadDashboardData(familyId, referenceDate = new Date()) {
     logsTo: tomorrow.toISOString(),
   };
 
-  const memberResults = await Promise.all(
-    members.map((member) => loadMemberData(member, windows)),
-  );
+  const memberResults = await Promise.all(members.map((member) => loadMemberData(member, windows)));
   const errors = memberResults.flatMap((item) => item.errors);
 
   return {
